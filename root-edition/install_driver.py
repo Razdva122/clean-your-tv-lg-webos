@@ -6,7 +6,7 @@ record; even a dead worker cannot authorize replay of an uncertain submission.
 """
 import re
 
-from installation import (Busy, Ownership, _optional_record, pending_journals, read_journal,
+from installation import (Busy, Ownership, home_conflict_details, _optional_record, pending_journals, read_journal,
                           TV_INSTALLER, TV_APPROVAL, TV_APPROVAL_TOKEN, setup_activation_lock,
                           setup_activation_token, cancel_setup_activation)
 
@@ -38,6 +38,7 @@ def cleanup_probe_details(value):
     for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
         number=value.get(key)
         if type(number) is int and low<=number<=high:result[key]=number
+    result.update(home_conflict_details(value.get('home_conflict_paths')))
     reason=value.get('native_reason')
     if reason in ('effect_busy','ui_release_failed'):
         result['native_reason']=reason
@@ -68,6 +69,7 @@ def failure_summary(error):
         result['package_rejected']=True
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail
+    result.update(home_conflict_details(getattr(error, 'home_conflict_paths', None)))
     probe=cleanup_probe_details(getattr(error,'cleanup_probe',None))
     if probe:result['cleanup_probe']=probe
     from deploy import install_failure_details
@@ -1245,6 +1247,9 @@ def main():
             result['reason']='restart-required'
         if args.action=='inspect' and isinstance(error,ValueError) and error.args==('project_apps_remain',):
             result['reason']='project-apps-remain'
+        if args.action in ('clean-remove', 'clean-status'):
+            # A fresh check of a completed removal must leave the durable fence intact.
+            result['last_failure'] = failure_summary(error)
         if args.action=='clean-remove':result['cleanup_error']=cleanup_failure(error)
         if args.action in ('install','remove') and not isinstance(error,Busy):
             result['action']=args.action
