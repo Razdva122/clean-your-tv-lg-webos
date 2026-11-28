@@ -15,7 +15,7 @@ from cytv import package
 SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
 VERSION='1.2.11'
-ENGINE_VERSION='1.2.17'
+ENGINE_VERSION='1.2.18'
 SINGLE_TILE_ENGINE_VERSION='2.0.0'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 

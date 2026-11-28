@@ -3,6 +3,7 @@ import base64
 from http.client import IncompleteRead
 from io import BytesIO
 import json
+import logging
 import re
 from pathlib import Path
 import ssl
@@ -267,20 +268,33 @@ class _SSAPDataUnavailable(UserError):
 
 
 class SSAP:
-    def __init__(self, host, directory, progress=print, *, settings_write=False, reuse_only=False):
+    # Keep the complete Helper manifest: older TVs store the last registration's
+    # permissions for the key shared by inventory and screen-state clients.
+    _HELPER_PERMISSIONS = (
+        'READ_APP_STATUS', 'READ_RUNNING_APPS', 'READ_POWER_STATE', 'CONTROL_POWER',
+        'READ_INSTALLED_APPS', 'READ_INPUT_DEVICE_LIST',
+    )
+
+    def __init__(self, host, directory, progress=print, *, settings_write=False, reuse_only=False,
+                 first_pair=False):
+        if first_pair and (directory is not None or settings_write or reuse_only):
+            raise ValueError('First TV pairing requires a separate registration')
         self.settings_write = settings_write
-        self.host, self.directory, self.progress = host, Path(directory), progress
-        self.reuse_only = reuse_only
+        self.host, self.directory, self.progress = host, None if first_pair else Path(directory), progress
+        self.reuse_only, self.first_pair = reuse_only, first_pair
         self.counter, self.ws, self.key = 0, None, None
 
     def __enter__(self):
         from websockets.sync.client import connect
         from websockets.exceptions import ConnectionClosed
-        from lgtv import PERMISSIONS
-        keyfile = self.directory / ('ssap-settings.json' if self.settings_write else 'ssap.json')
-        permissions = ['READ_SETTINGS', 'WRITE_SETTINGS'] if self.settings_write else PERMISSIONS
-        saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
-        key = saved.get('key') if isinstance(saved, dict) else None
+        if self.first_pair:
+            keyfile, key, permissions = None, None, self._HELPER_PERMISSIONS
+        else:
+            from lgtv import PERMISSIONS
+            keyfile = self.directory / ('ssap-settings.json' if self.settings_write else 'ssap.json')
+            permissions = ['READ_SETTINGS', 'WRITE_SETTINGS'] if self.settings_write else PERMISSIONS
+            saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
+            key = saved.get('key') if isinstance(saved, dict) else None
         if self.reuse_only and not (isinstance(key, str) and 0 < len(key) <= 1024):
             raise UserError('No saved TV remote-control pairing is available.', reason_code='pairing-required')
         payload = {'forcePairing': False,
@@ -289,37 +303,50 @@ class SSAP:
             payload['pairingType'] = 'PROMPT'
         if key:
             payload['client-key'] = key
-        connect_timeout = 5 if self.reuse_only else 10
+        url = f'wss://{self.host}:3001'
+        connect_options = dict(open_timeout=5 if self.reuse_only else 10,
+                               max_size=8 * 1024 * 1024, proxy=None)
+        if self.first_pair:
+            # The on-device caller supplies an address owned by this TV.
+            logger = logging.Logger('cytv.local-ssap')
+            logger.disabled = True  # WebSocket frame logs would include the issued key and inventory.
+            connect_options.update(source_address=(self.host, 0), compression=None, close_timeout=2,
+                                   logger=logger)
         try:
-            self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(), open_timeout=connect_timeout,
-                              max_size=8 * 1024 * 1024, proxy=None)
+            self.ws = connect(url, ssl=tv_context(), **connect_options)
         except ssl.SSLError:
             # Retry only the TLS connection, before sending any pairing data.
-            self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(compatible=True),
-                              open_timeout=connect_timeout, max_size=8 * 1024 * 1024, proxy=None)
+            self.ws = connect(url, ssl=tv_context(compatible=True), **connect_options)
         try:
             self.progress('Checking TV remote-control access…' if self.reuse_only
                           else 'Accept the remote-control pairing request on the TV if shown…')
-            self.ws.send(json.dumps({'id': 'register_0', 'type': 'register', 'payload': payload}))
+            registration = 'register_0'
+            self.ws.send(json.dumps({'id': registration, 'type': 'register', 'payload': payload}))
             deadline = time.monotonic() + (5 if self.reuse_only else 65)
+            prompt_seen = False
             while time.monotonic() < deadline:
                 reply = json.loads(self.ws.recv(timeout=max(0.1, deadline - time.monotonic())))
                 if not isinstance(reply, dict) or not isinstance(reply.get('payload', {}), dict):
                     raise ValueError('Invalid TV pairing response')
+                if self.first_pair and reply.get('id') != registration:
+                    continue
                 response = reply.get('payload', {})
-                if reply.get('type') == 'error':
+                if reply.get('type') == 'error' or (self.first_pair and response.get('returnValue') is False):
                     raise TVConnectionError('TV pairing was rejected. Check the on-screen request and local network access.',
                                             reason_code='pairing-rejected')
                 if self.reuse_only and response.get('pairingType'):
                     raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
+                if self.first_pair and reply.get('type') == 'response' and response.get('pairingType') == 'PROMPT':
+                    prompt_seen = True
                 if reply.get('type') == 'registered':
                     registered = response.get('client-key')
-                    if not isinstance(registered, str) or not 0 < len(registered) <= 1024:
+                    if (not isinstance(registered, str) or not 0 < len(registered) <= 1024
+                            or (self.first_pair and (not prompt_seen or len(registered.encode()) > 1024))):
                         raise ValueError('Invalid TV pairing response')
                     if self.reuse_only:
-                        if reply.get('id') != 'register_0' or registered != key:
+                        if reply.get('id') != registration or registered != key:
                             raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
-                    else:
+                    elif keyfile is not None:
                         private_write(keyfile, json.dumps({'key': registered}).encode())
                     self.key = registered
                     return self

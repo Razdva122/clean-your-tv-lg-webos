@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.10.0",
-  "to_helper": "0.11.0",
-  "rollback_home": "1.21.0",
-  "rollback_sha256": "5b920c0d877d6a4eafb4d4709298972e6e854200cd92f2749d3ab946a0b744eb",
-  "prior_helper_sha256": "1de7ee53a0d992d726d363bd13a30f44b3f60bdd0ed3507e59f151044c5cf707",
-  "candidate_archive_sha256": "a3a5faa1ee55b94aed84c3cccce3139a9a7d339d0eb697bcb562159627ce9bab",
-  "acceptance": "2026-11-25 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. macOS ARM64 cytv 0.24.3 source installer over saved Root SSH verified the signed published FHD Home 1.21.0 and final Helper 0.11.0 IPK SHA-256 2a0b2beb51215547fbf43b2f49abe0b49e36571ec675ba228e84d48254f8494c. Initial startup readback was unavailable until explicit Start. No pending operation. Installed launcher manifest and JS, Helper controller and ARM relay match their selected IPKs. One paired network HOME from Media Player reached LG Home at 0.27 s and CYTV at 4.71 s, where it held for one second. The same pair passed a 15-second network standby/Wake-on-LAN cycle with Ambient off. The Helper logged resume-already-foreground. All four network arrows moved selection before any Home input. The popup capability on this firmware reuses the earlier rejection evidence because its application IDs, implementation and permissions match. Physical input, HD, Developer Mode, sound, cold boot, OTA and full rollback were not checked in this compatibility probe."
+  "from_helper": "0.11.0",
+  "to_helper": "0.11.1",
+  "rollback_home": "1.22.0",
+  "rollback_sha256": "5c91e2503c19c33891337d2b8e437d2126307335b39504845e36376f5b11b8c4",
+  "prior_helper_sha256": "2a0b2beb51215547fbf43b2f49abe0b49e36571ec675ba228e84d48254f8494c",
+  "candidate_archive_sha256": "b6900c5141e5c3ae8387990a8d2610bd230398da6e11a0fe17502f1b2ad465f3",
+  "acceptance": "2026-11-27 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. macOS ARM64 cytv 0.25.0 source installer, No-root over saved Root SSH. After verified removal of the previous test installation and stable LG Home from Media Player, the ordinary installer paired published signed FHD Home 1.22.0 with Helper 0.11.1 IPK SHA-256 f9571d4ca23aa4ace24a581a72d52b737051481880af13552dd9a0d079be4d8d. Twelve installed Home, Helper and Ambient files matched the package contents. No pending setup. The Helper reported ready with a live controller and enabled Home. One paired network HOME from foreground Media Player opened LG Home at 0.29 s and CYTV Home at 0.86 s, where it remained for at least one second. The normal compatibility install personalizes only the Home app inventory. Physical remote, standby, cold boot, sound, OTA, HD and Developer Mode were untested. See docs/history/2026-11-27-release-1.30.0-helper-preflight.md."
 }

@@ -18,6 +18,7 @@
       metadata = root.CYTVReportVersion || {},
       suppliedCandidate = root.InstallerCandidate || {},
       installed = (result.installation && result.installation.versions) || {},
+      alternative = result.edition === 'no-root' ? result.versions || {} : {},
       productReason = result.installation && result.installation.reason,
       activity =
         result.action === 'remove'
@@ -61,6 +62,8 @@
         cytv: metadata.cytv,
         installer: metadata.installer,
         homebrew: result.tv && result.tv.homebrew_version,
+        home: installed.home || alternative.home,
+        helper: installed.helper || alternative.helper,
         root: installed.root,
         root_updater: installed['root-updater'],
         system_updater: installed.supervisor || installed['system-updater'],
@@ -112,6 +115,22 @@
         return ['rootBackendNeeded', 'externalRootSetup'];
       case 'no_root_setup_on_computer':
         return ['rootBackendUnsupported', 'noRootHandoff'];
+      case 'pairing-rejected':
+      case 'pairing-timeout':
+      case 'inventory-unavailable':
+        return ['noRootPairingFailed', 'noRootPairingNext'];
+      case 'pairing-unavailable':
+      case 'no-root-prerequisites':
+      case 'no-root-payload-invalid':
+      case 'root-admission-changed':
+        return ['rootBackendUnsupported', 'noRootUnavailable'];
+      case 'current-state-unverified':
+      case 'original-work-unverified':
+      case 'original-worker-interrupted':
+      case 'worker-unavailable':
+      case 'no-root-removal-mismatch':
+      case 'no-root-worker-busy':
+        return ['statusUnavailable', 'checkOriginal'];
       case 'home_interfaces_unconfirmed':
         return ['homeUnconfirmed', 'editionUnconfirmed'];
       case 'existing_installation':

@@ -200,6 +200,43 @@ class SystemBootstrapTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(any(call[0]=='upload' for call in remote.calls[before:]))
 
+    def test_homebrew_recovers_partial_supervisor_upload_with_original_identity(self):
+        import shlex
+        from unittest.mock import patch
+
+        profile = state.target('localhost', 'no-root', connection='root-ssh')
+        metadata = self.payload / 'system-updater/bundle.json'
+        bundle = json.loads(metadata.read_text())
+        bundle['product_schema'] = 2
+        metadata.write_text(json.dumps(bundle))
+        pin = hashlib.sha256(json.dumps(bundle, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        staging = '/tmp/cytv-system-updater-' + 'a' * 32
+        self.store.begin(profile, 'enable-system-updates', stage='upload', bootstrap_digest=pin,
+                         support_upload=staging)
+        setup = self.store.pending(profile)['diagnostic_id']
+        remote = Remote()
+        run = remote.run
+
+        def tv_run(command, **options):
+            if 'setup-system-updater.py' in command:
+                args = shlex.split(command)
+                self.assertIn(staging, args)
+                self.assertIn('--apply', args)
+                self.assertNotIn('--resume', args)
+                self.assertEqual(args[args.index('--setup-id') + 1], setup)
+                self.assertEqual(self.store.pending(profile)['stage'], 'setup')
+                return json.dumps({'edition': 'no-root', 'installed': True, 'setup_id': setup})
+            return run(command, **options)
+
+        remote.run = tv_run
+        installer = operations.Installer(remote, self.store, profile, self.payload, {},
+                                         progress=lambda _: None, homebrew_entry=True)
+        with patch('cytv.system_bootstrap.retained_stage', return_value=staging) as retained:
+            self.assertEqual(installer.enable_system_updates()['setup_id'], setup)
+            self.assertTrue(retained.call_args.kwargs['allow_partial'])
+        self.assertIsNone(self.store.pending(profile))
+
+    @unittest.skipUnless(os.name == 'posix', 'TV staging verifier requires POSIX ownership, modes and nofollow')
     def test_reused_root_upload_rejects_changed_bytes_extra_files_and_links(self):
         import subprocess,sys
         from cytv.system_bootstrap import VERIFY
@@ -210,15 +247,19 @@ class SystemBootstrapTests(unittest.TestCase):
         child=stage/'code';child.mkdir(mode=0o700)
         file=child/'setup';file.write_bytes(b'expected')
         expected=json.dumps({'code/setup':[8,hashlib.sha256(b'expected').hexdigest()]}).encode()
-        def check():return subprocess.run([sys.executable,'-I','-B','-c',verify,str(stage)],input=expected,capture_output=True)
+        def check(*args):return subprocess.run([sys.executable,'-I','-B','-c',verify,str(stage),*args],input=expected,capture_output=True)
         self.assertEqual(check().stdout,b'verified\n')
         file.write_bytes(b'modified')
         self.assertNotEqual(check().returncode,0)
+        self.assertNotEqual(check('partial').returncode,0)
         file.write_bytes(b'expected');(stage/'extra').mkdir(mode=0o700)
         self.assertNotEqual(check().returncode,0)
         (stage/'extra').rmdir();(stage/'link').symlink_to(file)
         self.assertNotEqual(check().returncode,0)
-        (stage/'link').unlink();file.unlink();child.rmdir();stage.rmdir()
+        (stage/'link').unlink();file.unlink()
+        self.assertNotEqual(check().returncode,0)
+        self.assertEqual(check('partial').stdout,b'verified\n')
+        child.rmdir();stage.rmdir()
         self.assertEqual(check().stdout,b'absent\n')
 
     def test_unconfirmed_bootstrap_retains_receipt_and_blocks_retry(self):

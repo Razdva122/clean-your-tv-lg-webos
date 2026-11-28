@@ -5,7 +5,9 @@
 
 ## Reproducible candidate preparation
 
-The offline Homebrew build also requires `ziglang==0.14.1` to build the shared ARM cleanup-lock gate.
+The offline Homebrew build requires `ziglang==0.14.1` for the ARM cleanup
+lock and Home Helper. It stages the pure Python files and license of
+`websockets==15.0.1` from the build environment.
 
 Keep `build_payload(...)`, `build_installer(...)` and the existing
 `homebrew/build.py` CLI as the build API. Build Root, Root Updater and supervisor
@@ -16,21 +18,27 @@ licenses are bundled with that archive, and Noto fonts carry OFL files. Project
 source is [MIT licensed](../LICENSE); see [third-party notices](../THIRD_PARTY_NOTICES.md)
 and the pinned [runtime source contract](../cytv/python_runtime.py).
 
-The offline inventory includes the fixed Python edition reader and the desktop
-Root capability modules it imports. For fresh setup the bootstrap executes
-that reader in its private, inventory-checked snapshot. The supported local
-installation uses the system-profile Root backend. A supported desktop-only
-Root backend leads to a desktop handoff. Positive evidence that Root cannot
-control Home leads to computer or Android setup to establish No-root eligibility
-and pair Home Helper. The TV candidate has no first-pair or installation path
-for No-root. [Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
+For fresh setup the bootstrap runs the shared Root capability classifier in a
+private snapshot. The supported local Root backend is system-profile. A
+supported desktop-only Root backend leads to a desktop handoff. A typed
+Root incompatibility invokes the No-root preflight. The pinned offline
+payload includes both Home resolutions, Home Helper and the Ambient
+companion. First pairing requires webOS approval and uses one bounded
+connection to the TV's own address on port 3001.
+
+The private No-root setup receipt binds the accepted package selection and
+original operation. The installer keeps the credentials within the normal
+Helper configuration and observer flow. Before reporting completion it
+checks package and configuration readback and verifies the System Updater
+setup. Home routing, standby and cold boot require device evidence.
+[Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
 
 The same application ID is used for the Homebrew package and the small
 edition-bound tile built by `build_tile(output, version, edition)`. The latter
 contains no Homebrew bridge or offline installer payload. Its `cytvTileEdition`
 metadata identifies the target of a plain application-manager launch. The full
 package stores this routing preference after the coordinator verifies a
-single-tile Root installation. A pending setup request goes to its original
+single-tile installation. A pending setup request goes to its original
 status flow first. An explicit launch with `cytvRecovery: true` opens the
 independent recovery interface.
 

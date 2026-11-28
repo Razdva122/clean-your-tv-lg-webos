@@ -41,20 +41,22 @@ for root,dirs,files in os.walk(stage,followlinks=False):
             for chunk in iter(lambda:src.read(65536),b''):h.update(chunk)
             if h.hexdigest()!=expected[key][1]:raise ValueError('staged file changed')
         seen.add(key)
-if seen!=set(expected):raise ValueError('incomplete staging')
+allow_partial=len(sys.argv)==3 and sys.argv[2]=='partial'
+if seen!=set(expected) and not allow_partial:raise ValueError('incomplete staging')
 print('verified')
 """
 
 
-def retained_stage(installer, stage, bundle, files):
+def retained_stage(installer, stage, bundle, files, *, allow_partial=False):
     if not isinstance(stage, str) or not re.fullmatch(r'(?:/tmp|'+re.escape(ROOT)+r')/cytv-system-updater-[a-f0-9]{32}',stage):
         raise UserError('The original update setup receipt could not be verified.', reason_code='pending-operation')
     expected={}
     for name in (*files,'bundle.json'):
         raw=(bundle/name).read_bytes()
         expected[name]=[len(raw),hashlib.sha256(raw).hexdigest()]
-    reply=installer.remote.run(installer._python_command([installer._python(),'-I','-B','-c',VERIFY,stage]),
-                               data=json.dumps(expected).encode(),timeout=60).strip()
+    args=[installer._python(),'-I','-B','-c',VERIFY,stage]
+    if allow_partial:args.append('partial')
+    reply=installer.remote.run(installer._python_command(args),data=json.dumps(expected).encode(),timeout=60).strip()
     if reply not in ('verified','absent'):
         raise UserError('The original update setup files could not be verified.', reason_code='pending-operation')
     return stage if reply=='verified' else None

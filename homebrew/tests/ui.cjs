@@ -185,8 +185,14 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         window.model = state;
         if (state.candidate) window.InstallerCandidate = state.candidate;
         window.saved = ID;
-        if (state.savedOperation)
+        if (state.savedOperation) {
           localStorage.setItem('cytv.installer.operation', ID);
+          if (state.edition === 'no-root')
+            localStorage.setItem(
+              'cytv.installer.operation.edition',
+              state.edition
+            );
+        }
         if (state.noHbc) return;
         window.PalmServiceBridge = function () {
           this.cancel = function () {};
@@ -233,7 +239,17 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
                 restart_required: false,
                 can_resume: false
               };
-            } else if (command.includes(' status '))
+            } else if (command.includes(' no-root-start ')) {
+              const operation = command.match(/--operation ([a-f0-9]+)/)[1];
+              reply = {
+                state: 'pending',
+                edition: 'no-root',
+                operation,
+                stage: 'pairing'
+              };
+            } else if (command.includes(' no-root-status '))
+              reply = window.model.noRootStatus;
+            else if (command.includes(' status '))
               reply = window.model.status || {
                 state: 'pending',
                 stage: 'root-deploy',
@@ -281,6 +297,10 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
             else
               reply = {
                 state: window.model.state,
+                edition: window.model.edition,
+                operation:
+                  window.model.noRootStatus &&
+                  window.model.noRootStatus.operation,
                 code: window.model.code,
                 reason: window.model.reason,
                 checks: window.model.checks,
@@ -320,6 +340,137 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     return { context, page };
   }
   try {
+    const fallback = await fixture({
+      state: 'no_root_ready',
+      edition: 'no-root'
+    });
+    await fallback.page.locator('[data-screen=no-root-review]').waitFor();
+    await fallback.page.locator('#install').click();
+    await fallback.page
+      .locator('[data-confirm-action=no-root-install]')
+      .waitFor();
+    await fallback.page.locator('#cancel').click();
+    assert.equal(
+      await fallback.page.evaluate(
+        () =>
+          window.calls.filter((command) => command.includes(' no-root-start '))
+            .length
+      ),
+      0
+    );
+    await fallback.page.locator('#install').click();
+    await fallback.page.locator('#confirm').click();
+    await fallback.page.locator('[data-screen=no-root-progress]').waitFor();
+    for (const [key, label] of [
+      ['no-root-pairing', 'Pair with webOS'],
+      ['no-root-install', 'Install No-root components'],
+      ['activate-home', 'Start Home Helper']
+    ]) {
+      assert.equal(
+        await fallback.page
+          .locator('[data-check=' + key + '] .check-name')
+          .textContent(),
+        label
+      );
+    }
+    const request = await fallback.page.evaluate(() => {
+      const saved = localStorage.getItem('cytv.installer.operation');
+      window.model.state = 'pending';
+      window.model.noRootStatus = {
+        state: 'complete',
+        current: true,
+        edition: 'no-root',
+        operation: saved
+      };
+      return saved;
+    });
+    assert.match(request, /^[a-f0-9]{32}$/);
+    await fallback.page.locator('#refresh').click();
+    await fallback.page.locator('[data-screen=no-root-installed]').waitFor();
+    assert.equal(
+      await fallback.page.evaluate(() =>
+        localStorage.getItem('cytv.tile.home')
+      ),
+      'no-root'
+    );
+    assert.equal(
+      await fallback.page.evaluate(
+        () =>
+          window.calls.filter((command) => command.includes(' no-root-start '))
+            .length
+      ),
+      1
+    );
+    // C3 makes setup visible and starts a status read before sending relaunch.
+    await fallback.page.evaluate(() => {
+      window.InstallerBridge.inspect = function () {
+        window.visibilityRefreshStarted = true;
+        return new Promise(() => {});
+      };
+      document.dispatchEvent(new Event('visibilitychange'));
+      if (window.visibilityRefreshStarted !== true)
+        throw new Error('Visibility did not start a status read');
+      document.dispatchEvent(
+        new CustomEvent('webOSRelaunch', {
+          detail: { params: { cytvMaintenance: true } }
+        })
+      );
+    });
+    assert.equal(new URL(fallback.page.url()).pathname, '/setup.html');
+    await Promise.all([
+      fallback.page.waitForRequest(
+        (request) => new URL(request.url()).pathname === '/index.html',
+        { timeout: 3000 }
+      ),
+      fallback.page.evaluate(() =>
+        document.dispatchEvent(new Event('webOSRelaunch'))
+      )
+    ]);
+    await fallback.context.close();
+
+    const russianFallback = await fixture(
+      {
+        state: 'pending',
+        edition: 'no-root',
+        savedOperation: true,
+        noRootStatus: {
+          state: 'pending',
+          edition: 'no-root',
+          operation: ID,
+          stage: 'pairing'
+        }
+      },
+      'ru',
+      { width: 1920, height: 1080 }
+    );
+    await russianFallback.page
+      .locator('[data-screen=no-root-progress]')
+      .waitFor();
+    assert(
+      (await russianFallback.page.evaluate(() => window.calls[0])).includes(
+        ' no-root-status ' + '--operation ' + ID
+      )
+    );
+    assert.equal(
+      await russianFallback.page
+        .locator('[data-check=homebrew-access]')
+        .count(),
+      0
+    );
+
+    for (const [key, label] of [
+      ['no-root-pairing', 'Сопряжение с webOS'],
+      ['no-root-install', 'Установка компонентов No-root'],
+      ['activate-home', 'Запуск Home Helper']
+    ]) {
+      const row = russianFallback.page.locator(
+        '[data-check=' + key + '] .check-name'
+      );
+      assert.equal(await row.textContent(), label);
+      assert(await row.isVisible());
+    }
+    await russianFallback.context.close();
+
     let f = await fixture({
         state: 'fresh',
         checks: {

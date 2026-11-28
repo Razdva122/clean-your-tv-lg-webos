@@ -1,6 +1,8 @@
 # Clean Your TV tile — unreleased
 
-The Clean Your TV tile is an unpublished Homebrew Channel candidate for compatible Root TVs.
+The Clean Your TV tile is an unpublished Homebrew Channel candidate for compatible,
+already-rooted TVs. It can install Root or offer No-root when its compatibility checks
+select that edition.
 The current public installation paths are the desktop and Android installers.
 The candidate and its catalog draft still require exact-package TV acceptance,
 public asset verification, screenshots, human review and catalog approval.
@@ -58,13 +60,18 @@ On a TV with on-device updates, open Home settings and choose
 **Update Clean Your TV**. A later update in this generation can be rolled
 back from **Recovery**.
 
-If the TV needs a Root Home backend available through the desktop installer,
-continue on a computer. If the candidate confirms that Root cannot control
-Home, it directs you to computer or Android setup to check No-root and pair
-Home Helper with the TV. The TV package has no No-root installer or supported
-way to establish the Helper's first pairing on the same TV. An inconclusive
-Home check offers **Check status**. With Node older than 8, use the computer
-or Android installer to check available editions.
+On a fresh supported TV, the installer selects Root by default. If the
+Root checks confirm that standard Root cannot control Home and the bundled
+No-root components pass their own checks, the installer selects No-root.
+Confirm installation once, then choose **Allow** when webOS asks to pair the
+TV remote control. Reopen the installer to check or continue the same request.
+Verified No-root setup keeps the same Clean Your TV tile.
+
+If a supported Root backend requires the desktop installer, continue on a
+computer. If Homebrew cannot run the TV installer or cannot verify the
+No-root prerequisites, use the desktop or Android installer. An inconclusive
+Home check offers **Check status**. This package requires an already-rooted
+TV even when it installs the No-root edition.
 
 On webOS 11, stock Homebrew Channel **0.7.3** can reject Installer's `exec`
 request with `Denied method call` even when the same entry works from root SSH.
