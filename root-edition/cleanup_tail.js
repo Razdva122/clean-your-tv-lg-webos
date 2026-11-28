@@ -183,8 +183,24 @@ function packageReceipts() {
   )
     throw Error('restart-required');
 }
+var cleanupMethods = {
+  'apps-dev': 'com.webos.applicationManager/dev/listApps',
+  'apps': 'com.webos.applicationManager/listApps',
+  'home-settings': 'com.webos.settingsservice/getSystemSettings',
+  'home-profiles': 'com.webos.service.systemprofile/getProfiles',
+  'key-filters': 'com.webos.service.config/getConfigs',
+  'activities-list': 'com.palm.activitymanager/list',
+  'activities-info': 'com.palm.activitymanager/getActivityInfo',
+  'inputs-list': 'com.webos.service.eim/getAllInputStatus',
+  'installer-remove': 'com.webos.appInstallService/dev/remove'
+};
+function unavailable(check, reason) {
+  var error = Error('cleanup-readback-unavailable');
+  error.cleanup_readback = { check: check, reason: reason };
+  return error;
+}
 // Yield between children on legacy TV libuv; keep Luna stdin open until exit.
-function childRead(command, args, timeout) {
+function childRead(command, args, timeout, check) {
   return new Promise(function (resolve, reject) {
     setImmediate(function () {
       var child,
@@ -195,48 +211,55 @@ function childRead(command, args, timeout) {
       try {
         child = cp.spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
       } catch (_) {
-        reject(Error('cleanup-readback-unavailable'));
+        reject(unavailable(check, 'client-start-failed'));
         return;
       }
-      function stop(reason) {
-        if (!failure) failure = Error(reason);
+      function stop(error) {
+        if (!failure) failure = error;
         child.kill('SIGKILL');
       }
       timer = setTimeout(function () {
-        stop('cleanup-readback-unavailable');
+        stop(unavailable(check, 'timeout'));
       }, timeout);
       child.on('error', function () {
-        failure = Error('cleanup-readback-unavailable');
+        if (!failure) failure = unavailable(check, 'client-start-failed');
       });
       child.stdin.on('error', function () {
-        failure = Error('cleanup-readback-unavailable');
+        if (!failure) failure = unavailable(check, 'client-stdin-error');
       });
       child.stdout.on('data', function (chunk) {
         size += chunk.length;
         if (size > 2097152) {
-          stop('cleanup-readback-malformed');
+          stop(Error('cleanup-readback-malformed'));
           return;
         }
         if (!failure) chunks.push(chunk);
       });
       child.stderr.on('data', function (chunk) {
         size += chunk.length;
-        if (size > 2097152) stop('cleanup-readback-malformed');
+        if (size > 2097152) stop(Error('cleanup-readback-malformed'));
       });
       child.on('close', function (code, signal) {
         clearTimeout(timer);
-        if (failure || code !== 0 || signal)
-          reject(failure || Error('cleanup-readback-unavailable'));
-        else resolve(Buffer.concat(chunks).toString());
+        if (failure) return reject(failure);
+        if (signal) return reject(unavailable(check, 'client-signal'));
+        if (code !== 0) {
+          var error = unavailable(check, 'client-exit');
+          if (Number.isInteger(code) && code >= 0 && code <= 255)
+            error.cleanup_readback.exit_status = code;
+          return reject(error);
+        }
+        resolve(Buffer.concat(chunks).toString());
       });
     });
   });
 }
-async function rpc(method, payload) {
+async function rpc(check, payload) {
   var raw = await childRead(
     '/usr/bin/luna-send',
-    ['-n', '1', 'luna://' + method, JSON.stringify(payload)],
-    15000
+    ['-n', '1', 'luna://' + cleanupMethods[check], JSON.stringify(payload)],
+    15000,
+    check
   );
   var value;
   try {
@@ -247,13 +270,30 @@ async function rpc(method, payload) {
   if (!object(value) || typeof value.returnValue !== 'boolean')
     throw Error('cleanup-readback-malformed');
   if (value.returnValue !== true) {
-    var error = Error('cleanup-readback-unavailable');
+    var text =
+      typeof value.errorText === 'string'
+        ? value.errorText.slice(0, 1024).toLowerCase()
+        : '';
+    var reason = 'negative-reply';
+    if (/permission denied|access denied|denied method/.test(text))
+      reason = 'permission-denied';
+    else if (/service does not exist|service is not registered/.test(text))
+      reason = 'service-missing';
+    else if (/unknown method|method does not exist/.test(text))
+      reason = 'method-missing';
+    var error = unavailable(check, reason);
+    if (
+      Number.isInteger(value.errorCode) &&
+      value.errorCode >= -2147483648 &&
+      value.errorCode <= 2147483647
+    )
+      error.cleanup_readback.error_code = value.errorCode;
     error.system_setting_not_found =
-      method === 'com.webos.settingsservice/getSystemSettings' &&
+      check === 'home-settings' &&
       value.errorCode == null &&
       value.errorText === 'There is no matched result from DB';
     error.systemprofile_missing =
-      method === 'com.webos.service.systemprofile/getProfiles' &&
+      check === 'home-profiles' &&
       value.errorCode === -1 &&
       value.errorText ===
         'Service does not exist: com.webos.service.systemprofile.';
@@ -263,7 +303,7 @@ async function rpc(method, payload) {
 }
 async function readDefaultApps(allowMissing) {
   try {
-    var settings = await rpc('com.webos.settingsservice/getSystemSettings', {
+    var settings = await rpc('home-settings', {
       category: 'general',
       keys: ['defaultApps']
     });
@@ -685,7 +725,7 @@ async function compositorStock(capture) {
     systemImage = true;
   });
   try {
-    await rpc('com.webos.service.systemprofile/getProfiles', {
+    await rpc('home-profiles', {
       names: ['defaultApps', 'idleApp'],
       subscribe: false
     });
@@ -694,7 +734,7 @@ async function compositorStock(capture) {
     if (error.systemprofile_missing !== true) throw error;
   }
   var chain = (
-    await rpc('com.webos.service.config/getConfigs', {
+    await rpc('key-filters', {
       configNames: ['com.webos.surfacemanager.keyFilters']
     })
   ).configs;
@@ -773,11 +813,10 @@ async function compositorStock(capture) {
 async function installedApps() {
   var inventory;
   try {
-    inventory = (await rpc('com.webos.applicationManager/dev/listApps', {}))
-      .apps;
+    inventory = (await rpc('apps-dev', {})).apps;
   } catch (error) {
     if (error.message !== 'cleanup-readback-unavailable') throw error;
-    inventory = (await rpc('com.webos.applicationManager/listApps', {})).apps;
+    inventory = (await rpc('apps', {})).apps;
   }
   return inventory;
 }
@@ -890,7 +929,7 @@ async function absent() {
     }
     try {
       profiles = (
-        await rpc('com.webos.service.systemprofile/getProfiles', {
+        await rpc('home-profiles', {
           names: ['defaultApps', 'idleApp'],
           subscribe: false
         })
@@ -974,13 +1013,10 @@ async function absent() {
   };
   var activityReply;
   try {
-    activityReply = await rpc('com.palm.activitymanager/list', activityRequest);
+    activityReply = await rpc('activities-list', activityRequest);
   } catch (error) {
     if (error.message !== 'cleanup-readback-unavailable') throw error;
-    activityReply = await rpc(
-      'com.palm.activitymanager/getActivityInfo',
-      activityRequest
-    );
+    activityReply = await rpc('activities-info', activityRequest);
   }
   var activities = activityReply.activities;
   if (
@@ -1003,8 +1039,7 @@ async function absent() {
     })
   )
     throw Error('owned-activity-remains');
-  var inputs = (await rpc('com.webos.service.eim/getAllInputStatus', {}))
-    .devices;
+  var inputs = (await rpc('inputs-list', {})).devices;
   if (
     !Array.isArray(inputs) ||
     inputs.some(function (item) {
@@ -1333,7 +1368,7 @@ async function removeInstallerTile() {
     );
   }
   if (await tileAbsent()) return;
-  await rpc('com.webos.appInstallService/dev/remove', {
+  await rpc('installer-remove', {
     id: tile,
     subscribe: false
   });
@@ -1659,6 +1694,8 @@ function canRecheckBoot() {
         reason: 'private-cleanup-incomplete',
         cleanup_error: diagnostic
       };
+      if (diagnostic === 'cleanup-readback-unavailable')
+        failure.cleanup_readback = error.cleanup_readback;
       if (diagnostic === 'route-changed' && error.home_conflict_paths)
         failure.home_conflict_paths = error.home_conflict_paths;
       if (diagnostic === 'owned-process-still-used')

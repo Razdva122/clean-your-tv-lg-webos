@@ -146,6 +146,37 @@ process.stdout.write(JSON.stringify({
                 self.assertEqual(saved['home_conflict_paths'], paths)
                 self.assertEqual(saved['first_failure']['home_conflict_paths'], paths)
 
+    def test_unavailable_readback_survives_report_and_first_failure(self):
+        from unittest.mock import patch
+        from cytv import diagnostics, state
+        from cytv.operations import Installer
+        detail = {'check':'activities-info', 'reason':'client-exit', 'exit_status':1}
+        old = {'check':'apps', 'reason':'timeout'}
+        for reason, fields, expected in [
+                ('cleanup-readback-unavailable', {'cleanup_readback':dict(detail, stderr='PRIVATE')}, detail),
+                ('cleanup-check-failed', {'last_failure':{'cleanup_readback':detail}}, detail),
+                ('cleanup-readback-unavailable', {'last_failure':{'cleanup_readback':old}}, None),
+                ('cleanup-readback-unavailable', {'cleanup_readback':dict(detail, check='PRIVATE')}, None)]:
+            with self.subTest(fields=fields), tempfile.TemporaryDirectory() as directory:
+                store = state.Store(directory)
+                profile = state.target('test-tv', 'root')
+                store.begin(profile, 'recover', stage='private-cleanup')
+                self.installer.profile, self.installer.store = profile, store
+                self.installer.progress = Mock()
+                reply = dict(stage='private-cleanup', state='recovery_required', cleanup_error=reason, **fields)
+                with patch('cytv.root_clean_tail.resume', return_value=reply), self.assertRaises(UserError) as caught:
+                    Installer._continue_root_clean_removal(self.installer, self.pending)
+                saved = json.loads(diagnostics.create_report(store, 'recover', profile, 'recover', caught.exception,
+                                   tv_info={'frontend':'android'}, status={'device':{'product':reply}}).read_text())
+                for item in (saved, saved['first_failure'], saved['observation_failure']):
+                    self.assertEqual(item.get('cleanup_readback'), expected)
+                product = saved['status']['product']
+                if reason == 'cleanup-readback-unavailable':
+                    self.assertEqual(product.get('cleanup_readback'), expected)
+                else:
+                    self.assertEqual(product['last_failure']['cleanup_readback'], expected)
+                self.assertNotIn('PRIVATE', json.dumps(saved))
+
     def test_current_cleanup_failure_takes_precedence_over_old_restart(self):
         from unittest.mock import patch
         from cytv.operations import Installer

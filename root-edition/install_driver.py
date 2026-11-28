@@ -6,7 +6,7 @@ record; even a dead worker cannot authorize replay of an uncertain submission.
 """
 import re
 
-from installation import (Busy, Ownership, home_conflict_details, _optional_record, pending_journals, read_journal,
+from installation import (Busy, Ownership, cleanup_readback_details, home_conflict_details, _optional_record, pending_journals, read_journal,
                           TV_INSTALLER, TV_APPROVAL, TV_APPROVAL_TOKEN, setup_activation_lock,
                           setup_activation_token, cancel_setup_activation)
 
@@ -69,6 +69,7 @@ def failure_summary(error):
         result['package_rejected']=True
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail
+    result.update(cleanup_readback_details(getattr(error, 'cleanup_readback', None)))
     result.update(home_conflict_details(getattr(error, 'home_conflict_paths', None)))
     probe=cleanup_probe_details(getattr(error,'cleanup_probe',None))
     if probe:result['cleanup_probe']=probe

@@ -281,6 +281,27 @@ def root_restore_failure_details(value):
 HOME_CONFLICT_PATHS = ('/media/developer/cleanyourtv', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser')
 
 
+def cleanup_readback_details(value):
+    """Allow only fixed cleanup checks, causes and their bounded numeric codes."""
+    if not isinstance(value, dict):
+        return {}
+    check, reason = value.get('check'), value.get('reason')
+    if check not in ('apps-dev', 'apps', 'home-settings', 'home-profiles', 'key-filters',
+                     'activities-list', 'activities-info', 'inputs-list', 'installer-remove'):
+        return {}
+    rejected = ('negative-reply', 'permission-denied', 'service-missing', 'method-missing')
+    if reason not in (*rejected, 'timeout', 'client-start-failed', 'client-stdin-error', 'client-exit', 'client-signal'):
+        return {}
+    detail = {'check': check, 'reason': reason}
+    status = value.get('exit_status')
+    if reason == 'client-exit' and type(status) is int and 1 <= status <= 255:
+        detail['exit_status'] = status
+    code = value.get('error_code')
+    if reason in rejected and type(code) is int and -(2**31) <= code < 2**31:
+        detail['error_code'] = code
+    return {'cleanup_readback': detail}
+
+
 def home_conflict_details(paths):
     """Export only the three fixed marker names, never their contents or link targets."""
     known = HOME_CONFLICT_PATHS

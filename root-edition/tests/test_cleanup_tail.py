@@ -186,6 +186,7 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail(NO_SYNC='1',ACTIVITY_LIST_UNAVAILABLE='1')
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean')
+        self.assertNotIn('cleanup_readback', reply)
         self.assertFalse(self.runtime.exists())
         result,reply=self.run_tail(NO_SYNC='1',ACTIVITY_LIST_UNAVAILABLE='1',MODE='verify')
         self.assertEqual(result.returncode,0,result.stderr)
@@ -398,6 +399,19 @@ class CleanupTail(unittest.TestCase):
             result,reply=self.run_tail(MODE='verify')
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertEqual(reply['state'],'verified-clean')
+
+    def test_unavailable_readback_identifies_the_failing_rpc(self):
+        for flags, detail in [
+                ({'ALL_CATALOGS_DENIED':'1'}, {'check':'apps', 'reason':'negative-reply'}),
+                ({'ACTIVITY_BOTH_UNAVAILABLE':'1'}, {'check':'activities-info', 'reason':'client-exit', 'exit_status':1}),
+                ({'SETTINGS_ERROR':json.dumps({'returnValue':False,'errorCode':-42,'errorText':'Access denied PRIVATE'})},
+                 {'check':'home-settings', 'reason':'permission-denied', 'error_code':-42})]:
+            with self.subTest(flags=flags):
+                result, reply = self.run_tail(**flags)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(reply['cleanup_error'], 'cleanup-readback-unavailable')
+                self.assertEqual(reply.get('cleanup_readback'), detail)
+                self.assertNotIn('PRIVATE', result.stdout + result.stderr)
 
     def test_unavailable_or_malformed_catalog_blocks_final_confirmation(self):
         for flags,reason in (({'ALL_CATALOGS_DENIED':'1'},'cleanup-readback-unavailable'),
@@ -839,6 +853,7 @@ class CleanupTail(unittest.TestCase):
             result,reply=self.run_tail(PRIVATE_ERROR=private)
             self.assertNotEqual(result.returncode,0)
             self.assertEqual(reply.get('cleanup_error'),'cleanup-readback-unavailable')
+            self.assertEqual(reply.get('cleanup_readback'), {'check':'apps', 'reason':'client-start-failed'})
             self.assertNotIn(private,result.stdout+result.stderr)
             self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-readback-unavailable\n')
 

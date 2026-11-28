@@ -2578,11 +2578,17 @@ print('CYTV_PROJECT_REMOVED')
             message = REMOVAL_BLOCKERS[phase_reason] if phase_reason and code == 'cleanup-check-failed' else messages[code]
             error = UserError(message, reason_code=code)
             # Only this refusal (a retained first failure may describe a different attempt).
-            from .errors import home_conflict_details
+            from .errors import cleanup_readback_details, home_conflict_details
+            if failure == 'cleanup-readback-unavailable':
+                detail = cleanup_readback_details(reply.get('cleanup_readback'))
+                if detail:
+                    error.cleanup_readback = detail['cleanup_readback']
             if failure == 'route-changed':
                 paths = reply.get('home_conflict_paths')
             elif failure == 'cleanup-check-failed':
                 last = diagnostics.context.worker_summary(reply.get('last_failure'))
+                if 'cleanup_readback' in last:
+                    error.cleanup_readback = last['cleanup_readback']
                 paths = last.get('home_conflict_paths') or last.get('cleanup_probe', {}).get('home_conflict_paths')
             else:
                 paths = None
