@@ -4,7 +4,7 @@
   const formats = root.WeatherData.formats,
     store = root.WeatherData.create({
       language: root.HomeI18n.language(),
-      metRequest: root.HomeWeatherTransport.met
+      metRequest: root.HomeWeatherTransport && root.HomeWeatherTransport.met
     }),
     doc = root.document;
   let options = store.state(),
@@ -602,6 +602,8 @@
         )
         .join('') +
       '</div><p class="weather-settings-note"></p></div></div><div class="weather-right"><div class="weather-provider" role="group" aria-labelledby="weather-provider-label"><div id="weather-provider-label" class="weather-provider-label"></div><div class="weather-provider-choices"><button type="button" data-weather-provider="auto"></button><button type="button" data-weather-provider="met-no"></button><button type="button" data-weather-provider="open-meteo"></button></div><div class="weather-actual-source" role="status"></div></div><div class="weather-live-preview"><div class="weather-live-title"></div><div class="weather-preview-window" aria-hidden="true"><div id="weatherPreviewSurface" class="weather-preview-surface ctv-home"><div id="weatherPreview" class="weather-preview home-weather ctv-weather"></div></div></div></div></div>';
+    if (!root.HomeWeatherTransport)
+      settingsHost.querySelector('[data-weather-provider="met-no"]').remove();
     settingsHost
       .querySelectorAll('[data-weather-provider]')
       .forEach((button) => {

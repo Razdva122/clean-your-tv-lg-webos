@@ -414,6 +414,7 @@ jobs:
           BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
           BROWSER_CHANNEL=chromium node tests/renewal-ui.cjs
           BROWSER_CHANNEL=chromium node single-home/tests/ui.cjs
+          BROWSER_CHANNEL=chromium python single-home/tests/packaged_ui.py
           BROWSER_CHANNEL=chromium node tests/system_updates/browser/profile.cjs
           BROWSER_CHANNEL=chromium node tests/home-viewport-ui.cjs
           BROWSER_CHANNEL=chromium node tests/helper-panel-diagnostics.cjs --browser

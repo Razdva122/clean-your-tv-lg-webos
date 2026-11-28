@@ -1,11 +1,10 @@
 (function () {
   'use strict';
   var service = 'luna://io.github.razdva122.cytvhomepilot.service/';
-  var appId = 'io.github.razdva122.cytvhomepilot';
   var ru = !/^en(?:-|$)/i.test(navigator.language || 'ru');
   var words = {
-    home: ['Главный экран', 'Home'],
-    settings: ['Настройки', 'Settings'],
+    setup: ['Настройка Home', 'Set up Home'],
+    settings: ['Подключение к телевизору', 'TV connection'],
     back: ['На главный экран', 'Back to Home'],
     connect: ['Сопряжение с телевизором', 'TV pairing'],
     paired: ['Телевизор сопряжён', 'TV paired'],
@@ -36,7 +35,6 @@
       'Pairing needs private storage in the service.'
     ],
     checking: ['Проверяем состояние службы…', 'Checking the service…'],
-    loadingApps: ['Получаем приложения…', 'Reading installed apps…'],
     startup: ['Фоновый запуск', 'Background startup'],
     off: ['Фоновый запуск выключен.', 'Background startup is off.'],
     pending: [
@@ -54,31 +52,6 @@
       'Start the service when the TV turns on'
     ],
     stop: ['Остановить фоновый запуск', 'Stop background startup'],
-    apps: ['Приложения', 'Apps'],
-    editLayout: ['Изменить список', 'Edit app list'],
-    done: ['Готово', 'Done'],
-    editHint: [
-      'Выберите плитку, чтобы скрыть её с главного экрана.',
-      'Select an app to hide its tile from Home.'
-    ],
-    empty: [
-      'На главном экране пока нет приложений.',
-      'There are no apps on Home yet.'
-    ],
-    restoreApps: [
-      'Показать все установленные приложения',
-      'Show all installed apps on Home'
-    ],
-    retryCatalog: ['Обновить список приложений', 'Refresh app list'],
-    noApps: [
-      'Телевизор вернул пустой список приложений.',
-      'The TV returned an empty app list.'
-    ],
-    saveError: [
-      'Не удалось сохранить выбор плиток.',
-      'Could not save the selected tiles.'
-    ],
-    launchError: ['Не удалось открыть приложение.', 'Could not open the app.'],
     'denied': [
       'Служба не разрешила этот запрос.',
       'The service denied this request.'
@@ -109,8 +82,8 @@
       'Pairing timed out. Check the prompt on the TV.'
     ],
     'saved-pairing-rejected': [
-      'Телевизор отклонил сохранённое сопряжение. В настройках выберите «Сопрячь заново» и подтвердите запрос.',
-      'The TV rejected the saved pairing. Open Settings, select Pair again and approve the new request.'
+      'Телевизор отклонил сохранённое сопряжение. Выберите «Сопрячь заново» и подтвердите запрос.',
+      'The TV rejected the saved pairing. Select Pair again and approve the new request.'
     ],
     'network-unavailable': [
       'Не удалось подключиться к этому телевизору.',
@@ -193,57 +166,31 @@
   function call(method, args, cb, timeout) {
     rpc(service + method, args, cb, timeout);
   }
+  var settings = /(?:^|[?&])settings=1(?:&|$)/.test(location.search);
+  var repairRequested =
+    settings &&
+    /(?:^|[?&])reason=saved-pairing-rejected(?:&|$)/.test(location.search);
+  var notice = repairRequested ? 'saved-pairing-rejected' : '';
   var state = null,
-    page = 'home',
-    editing = false,
-    deferred = false;
-  var pairing = false,
+    pairing = false,
     changingStartup = '',
     checking = false,
-    reading = false,
     retryPair = false;
   var stateEpoch = 0,
     pairEpoch = 0,
     startupEpoch = 0,
-    catalogEpoch = 0,
     pollTimer,
     pollUntil = 0;
-  var apps = [],
-    selection = null,
-    notice = '',
-    failedCatalog = false;
-  var layoutKey = 'pilot.home.layout.v1';
-  try {
-    var raw = localStorage.getItem(layoutKey);
-    if (raw !== null) {
-      var saved = JSON.parse(raw);
-      selection = Array.isArray(saved) && saved.every(validId) ? saved : [];
+
+  function goHome(skipSetup) {
+    if (skipSetup) {
+      try {
+        sessionStorage.setItem('cytv.home.skipSetup', '1');
+      } catch (_) {}
     }
-    deferred = localStorage.getItem('pilot.home.later') === '1';
-  } catch (_) {
-    selection = [];
-    notice = 'saveError';
+    location.replace('../index.html' + (skipSetup ? '?skipSetup=1' : ''));
   }
-  function validId(id) {
-    return (
-      typeof id === 'string' &&
-      id.length <= 256 &&
-      /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/.test(id) &&
-      id !== appId
-    );
-  }
-  function save(ids) {
-    var text = JSON.stringify(ids);
-    try {
-      localStorage.setItem(layoutKey, text);
-      if (localStorage.getItem(layoutKey) !== text) throw Error();
-      selection = ids;
-      return true;
-    } catch (_) {
-      notice = 'saveError';
-      return false;
-    }
-  }
+
   function allowed() {
     return (
       !!state && state.storageReady === true && state.credentialsReady === true
@@ -284,15 +231,12 @@
       : 'unavailable';
   }
   function render() {
-    var settings = page === 'settings',
-      paired = !!(state && state.paired),
+    var paired = !!(state && state.paired),
       active = pairing || !!(state && state.pairing);
-    var onboarding = !settings && !paired && !deferred;
     document.documentElement.lang = ru ? 'ru' : 'en';
-    label('title', settings ? 'settings' : 'home');
-    label('settings', settings ? 'back' : 'settings');
+    label('title', settings ? 'settings' : 'setup');
+    show('back', settings && !active);
     el('notice').textContent = notice ? t(notice) : '';
-    show('pairArea', settings || onboarding || active);
     label('pairHeading', paired ? 'paired' : 'connect');
     label('pairStatus', active ? 'waiting' : paired ? 'pairedInfo' : 'first');
     show('pair', !paired && !active && !retryPair);
@@ -301,7 +245,7 @@
     el('pairAgain').disabled = !allowed() || checking;
     show('retry', retryPair && !active && allowed());
     show('cancelPair', active);
-    show('later', onboarding && !active);
+    show('later', !settings && !active);
     el('storageStatus').textContent = allowed()
       ? ''
       : t(
@@ -335,154 +279,26 @@
       );
       el('stop').disabled = changingStartup === 'disable';
     }
-    show('libraryArea', !settings && !onboarding);
-    show(
-      'libraryActions',
-      paired && (settings || failedCatalog || !el('appGrid').children.length)
-    );
-    show('restoreApps', paired && !failedCatalog);
-    el('restoreApps').disabled = reading;
-    show('retryCatalog', paired);
-    el('retryCatalog').disabled = reading;
-    show(
-      'editLayout',
-      paired && (editing || el('appGrid').children.length > 0)
-    );
-    label('editLayout', editing ? 'done' : 'editLayout');
-    el('gridHint').textContent = editing
-      ? t('editHint')
-      : reading
-        ? t('loadingApps')
-        : !el('appGrid').children.length
-          ? t(paired && !apps.length && !failedCatalog ? 'noApps' : 'empty')
-          : '';
-    document.body.setAttribute('data-paired', String(paired));
-    document.body.setAttribute(
-      'data-startup',
-      state ? state.startup : 'unknown'
-    );
   }
-  function drawGrid() {
-    var grid = el('appGrid'),
-      active = document.activeElement;
-    var wasTile = grid.contains(active),
-      focusedIndex = Array.prototype.indexOf.call(grid.children, active);
-    var map = Object.create(null);
-    apps.forEach(function (a) {
-      map[a.id] = a;
-    });
-    var ids =
-      selection === null
-        ? apps.map(function (a) {
-            return a.id;
-          })
-        : selection;
-    grid.textContent = '';
-    ids.forEach(function (id) {
-      if (!map[id]) return;
-      var tile = document.createElement('button');
-      tile.setAttribute('data-app-id', id);
-      tile.textContent = map[id].title;
-      tile.onclick = function () {
-        if (editing) {
-          if (
-            save(
-              ids.filter(function (item) {
-                return item !== id;
-              })
-            )
-          )
-            drawGrid();
-          render();
-          return;
-        }
-        rpc(
-          'luna://com.webos.applicationManager/launch',
-          { id: id },
-          function (r) {
-            if (r.returnValue !== true) {
-              notice = 'launchError';
-              render();
-            }
-          }
-        );
-      };
-      grid.appendChild(tile);
-    });
-    if (wasTile) {
-      var next =
-        grid.children[Math.min(focusedIndex, grid.children.length - 1)];
-      if (next) next.focus();
-      else focus('editLayout');
+
+  function focusAction() {
+    var ids = [
+      'cancelPair',
+      'retry',
+      'pair',
+      'pairAgain',
+      'probe',
+      'back',
+      'later'
+    ];
+    for (var i = 0; i < ids.length; i++) {
+      if (visible(el(ids[i]))) {
+        focus(ids[i]);
+        return;
+      }
     }
   }
-  function readCatalog(restore) {
-    if (!state || !state.paired) return;
-    var epoch = ++catalogEpoch;
-    reading = true;
-    render();
-    call(
-      'catalog',
-      {},
-      function (r) {
-        if (epoch !== catalogEpoch) return;
-        reading = false;
-        if (
-          r.returnValue !== true ||
-          !Array.isArray(r.apps) ||
-          r.apps.length > 300
-        ) {
-          failedCatalog = true;
-          notice = r.returnValue === true ? 'invalid-inventory' : error(r);
-          render();
-          return;
-        }
-        var seen = Object.create(null),
-          next = [];
-        for (var i = 0; i < r.apps.length; i++) {
-          var a = r.apps[i];
-          if (
-            !a ||
-            typeof a.title !== 'string' ||
-            !a.title ||
-            a.title.length > 256 ||
-            typeof a.id !== 'string'
-          ) {
-            failedCatalog = true;
-            notice = 'invalid-inventory';
-            render();
-            return;
-          }
-          if (validId(a.id) && !seen[a.id]) {
-            seen[a.id] = true;
-            next.push({ id: a.id, title: a.title });
-          }
-        }
-        apps = next;
-        failedCatalog = false;
-        notice = '';
-        if (apps.length && (selection === null || restore))
-          save(
-            apps.map(function (a) {
-              return a.id;
-            })
-          );
-        if (restore) {
-          page = 'home';
-          editing = false;
-        }
-        drawGrid();
-        render();
-        if (
-          page === 'home' &&
-          el('appGrid').children.length &&
-          (restore || document.activeElement === document.body)
-        )
-          el('appGrid').children[0].focus();
-      },
-      16000
-    );
-  }
+
   function poll() {
     clearTimeout(pollTimer);
     if (
@@ -501,9 +317,8 @@
       refresh(false);
     }, 2000);
   }
-  function refresh(loadGrid, target) {
-    var epoch = ++stateEpoch,
-      wasPaired = !!(state && state.paired);
+  function refresh(target) {
+    var epoch = ++stateEpoch;
     checking = true;
     render();
     call('status', {}, function (r) {
@@ -524,23 +339,19 @@
         startup: r.startup,
         bootObserved: r.bootObserved === true
       };
-      if (!state.paired) {
-        catalogEpoch++;
-        reading = false;
-        failedCatalog = false;
-        apps = [];
-        drawGrid();
+      if (!settings && state.paired && !state.pairing && allowed()) {
+        goHome(false);
+        return;
       }
       if (state.startup !== 'pending' && !state.pairing) pollUntil = 0;
       render();
       poll();
-      if (state.paired && (loadGrid || !wasPaired)) readCatalog(false);
-      if (target) {
-        if (page === 'settings') focus('settings');
-        else if (visible(el('pair'))) focus('pair');
-        else if (visible(el('probe'))) focus('probe');
-        else if (!el('appGrid').children.length) focus('settings');
-      }
+      if (
+        target ||
+        !visible(document.activeElement) ||
+        document.activeElement === document.body
+      )
+        focusAction();
     });
   }
   function checkStorage() {
@@ -558,7 +369,7 @@
         focus('probe');
         return;
       }
-      refresh(false, true);
+      refresh(true);
     });
   }
   function startPair() {
@@ -586,11 +397,8 @@
           focus('retry');
           return;
         }
-        page = 'home';
-        editing = false;
-        deferred = true;
         notice = '';
-        refresh(true);
+        goHome(false);
       },
       80000
     );
@@ -604,9 +412,7 @@
       retryPair = false;
       if (state) state.pairing = false;
       notice = r.returnValue === true ? 'cancelled' : error(r);
-      refresh(false);
-      render();
-      focus('pair');
+      refresh(true);
     });
   }
   function startup(enable) {
@@ -640,19 +446,11 @@
       }
     );
   }
-  el('settings').onclick = function () {
-    page = page === 'settings' ? 'home' : 'settings';
-    editing = false;
-    render();
-    focus('settings');
+  el('back').onclick = function () {
+    goHome(repairRequested || !allowed() || !state.paired);
   };
   el('later').onclick = function () {
-    deferred = true;
-    try {
-      localStorage.setItem('pilot.home.later', '1');
-    } catch (_) {}
-    render();
-    focus('settings');
+    goHome(true);
   };
   el('pair').onclick =
     el('pairAgain').onclick =
@@ -666,20 +464,8 @@
   el('stop').onclick = function () {
     startup(false);
   };
-  el('editLayout').onclick = function () {
-    editing = !editing;
-    render();
-    var first = el('appGrid').children[0];
-    if (editing && first) first.focus();
-    else focus('settings');
-  };
-  el('restoreApps').onclick = function () {
-    readCatalog(true);
-  };
-  el('retryCatalog').onclick = function () {
-    readCatalog(false);
-  };
-  var captions = [
+  [
+    'back',
     'pair',
     'later',
     'cancelPair',
@@ -687,37 +473,18 @@
     'retry',
     'probe',
     'enableStartup',
-    'stop',
-    'restoreApps',
-    'retryCatalog'
-  ];
-  captions.forEach(function (id) {
+    'stop'
+  ].forEach(function (id) {
     label(id);
   });
-  label('libraryHeading', 'apps');
   label('startupHeading', 'startup');
-  function clock() {
-    var d = new Date();
-    el('clock').textContent =
-      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
-  }
-  clock();
-  setInterval(clock, 30000);
   document.addEventListener('keydown', function (e) {
     var key = e.keyCode,
       active = document.activeElement;
     if (key === 27 || key === 461) {
-      if (editing) {
-        editing = false;
-        render();
-        focus('editLayout');
-      } else if (page === 'settings') {
-        page = 'home';
-        render();
-        focus('settings');
-      } else if (pairing || (state && state.pairing)) {
-        cancel();
-      } else return;
+      if (pairing || (state && state.pairing)) cancel();
+      else if (settings) goHome(repairRequested || !allowed() || !state.paired);
+      else return;
       e.preventDefault();
       return;
     }
@@ -764,10 +531,10 @@
   });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) clearTimeout(pollTimer);
-    else if (!pairing && !changingStartup) refresh(true);
+    else if (!pairing && !changingStartup) refresh(false);
   });
   document.addEventListener('webOSRelaunch', function () {
-    if (!pairing && !changingStartup) refresh(true);
+    if (!pairing && !changingStartup) refresh(false);
   });
-  refresh(true, true);
+  refresh(true);
 })();

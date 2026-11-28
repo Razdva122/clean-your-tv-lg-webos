@@ -2,6 +2,16 @@
 // The pilot follows the existing Helper's SSAP registration and launch-point
 // exchange. This service owns a separate, inventory-only registration.
 var appId = 'io.github.razdva122.cytvhomepilot';
+function catalogEntry(a) {
+  var color = a.iconColor || a.bgColor;
+  return {
+    id: a.id,
+    title: a.title,
+    icon: '',
+    iconColor:
+      typeof color === 'string' && /^#[a-f0-9]{6}$/i.test(color) ? color : ''
+  };
+}
 function visibleApps(open, installed) {
   var seen = Object.create(null),
     result = [];
@@ -16,14 +26,14 @@ function visibleApps(open, installed) {
     )
       return;
     seen[a.id] = true;
-    result.push({ id: a.id, title: a.title });
+    result.push(catalogEntry(a));
   });
   // Some TVs omit the tuner from launch points. Only an actual installed tuner
   // can supply its title; no system application ID is synthesized for launch.
   if (installed && !seen['com.webos.app.livetv'])
     installed.some(function (a) {
       if (!valid(a) || a.id !== 'com.webos.app.livetv') return false;
-      result.unshift({ id: a.id, title: a.title });
+      result.unshift(catalogEntry(a));
       return true;
     });
   return result;
@@ -65,6 +75,7 @@ module.exports = function inventory(saved, current, options) {
       registered = false,
       issued,
       points = null,
+      deadline = Date.now() + 8000,
       index = 0;
     var finalTimer = setTimeout(
       function () {
@@ -88,8 +99,31 @@ module.exports = function inventory(saved, current, options) {
         } catch (_) {}
       }
       if (!current()) error = 'cancelled';
-      if (error) reject(Error(error));
-      else resolve({ key: issued, apps: visibleApps(points, installed) });
+      if (error) {
+        reject(Error(error));
+        return;
+      }
+      var apps = visibleApps(points, installed);
+      // A first pairing only persists its key. Fetch art on the normal catalog
+      // request, within the same deadline as its saved-key registration.
+      if (!saved) {
+        resolve({ key: issued, apps: apps });
+        return;
+      }
+      var readIcons = options.readIcons || require('./app-inventory').icons;
+      readIcons(apps, addresses[index - 1], options, deadline, [
+        points,
+        installed || []
+      ]).then(function (art) {
+        if (!current()) {
+          reject(Error('cancelled'));
+          return;
+        }
+        art.forEach(function (entry, i) {
+          apps[i].icon = entry.icon;
+        });
+        resolve({ key: issued, apps: apps });
+      }, reject);
     }
     function send(q) {
       try {

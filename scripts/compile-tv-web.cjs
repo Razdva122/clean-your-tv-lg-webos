@@ -126,13 +126,17 @@ async function stylesheet(code, filename) {
 
 async function document(code, filename) {
   const tree = html.parse(code);
+  const polyfillsPath = path.posix.relative(
+    path.posix.dirname(filename),
+    polyfillsName
+  );
   let head,
     hasPolyfills = false;
   async function visit(node) {
     if (node.tagName === 'head') head = node;
     const attrs = node.attrs || [];
     const source = attrs.find((attr) => attr.name === 'src');
-    if (node.tagName === 'script' && source && source.value === polyfillsName)
+    if (node.tagName === 'script' && source && source.value === polyfillsPath)
       hasPolyfills = true;
     if (node.tagName === 'style') {
       for (const text of node.childNodes)
@@ -167,7 +171,7 @@ async function document(code, filename) {
   await visit(tree);
   if (!hasPolyfills) {
     const script = html.parseFragment(
-      '<script src="' + polyfillsName + '"></script>'
+      '<script src="' + polyfillsPath + '"></script>'
     ).childNodes[0];
     script.parentNode = head;
     head.childNodes.unshift(script);

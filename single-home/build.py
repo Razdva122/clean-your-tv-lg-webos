@@ -55,12 +55,48 @@ def inspect(raw):
     return app, files[app_dir + package.safe_name(app['icon'])], sum(map(len, files.values()))
 
 
+# These integrations depend on the other editions' services. The pilot ships
+# the product rendering and editing code and provides its own settings host.
+OTHER_EDITION_ASSETS = {
+    'native-bootstrap.js', 'helper-control.js', 'install-settings.js',
+    'input-sources.js', 'input-preview.js', 'browser-profile.js',
+    'theme-receiver.js', 'wallpaper-media-cache.js', 'release-notes.js',
+    'system-updates.js', 'update-panel.js', 'screensaver-settings.css',
+    'screensaver-config.js', 'screensaver-idle.js', 'screensaver-personal.js',
+    'screensaver-settings.js', 'weather-transport.js',
+}
+
+
+def product_app(sources):
+    app = {name: data for name, data in sources('launcher').items()
+           if name not in OTHER_EDITION_ASSETS and not name.startswith('icons/')}
+    setup = sources('single-home/app')
+    pilot = json.loads(setup.pop('appinfo.json'))
+    product = json.loads(app['appinfo.json'])
+    pilot['themeEngineVersion'] = product.get('themeEngineVersion', product['version'])
+    pilot['requiredACG'] = sorted(set(product['requiredACG']) | set(pilot['requiredACG']))
+    product.pop('systemUpdateProtocol', None)
+    app['appinfo.json'] = encode({**product, **pilot, 'icon': product['icon'], 'largeIcon': product['largeIcon']})
+    app.update({'setup/' + name: data for name, data in setup.items()})
+    app['apps.js'] = b'window.TV_APPS = {apps: [], inputs: []};\n'
+    adapter = ROOT / 'single-home/launcher'
+    app['profile-bootstrap.js'] = (adapter / 'profile-bootstrap.js').read_bytes()
+    app['renewal-panel.js'] = (adapter / 'settings.js').read_bytes()
+    # Keep the product markup and load order verbatim for the included modules.
+    def include(match):
+        return b'' if match[1].decode() in OTHER_EDITION_ASSETS else match[0]
+    app['index.html'] = re.sub(rb'<script src="([^"]+)"></script>', include, app['index.html'])
+    app['index.html'] = re.sub(rb'<link rel="stylesheet" href="([^"]+)"\s*/>', include, app['index.html'])
+    return app
+
+
 def build(output, version):
     build_tools = runpy.run_path(str(ROOT / 'scripts/build-cytv.py'))
     sources = build_tools['tracked_files']
-    app = sources('single-home/app')
+    app = product_app(sources)
     service = sources('single-home/service')
     service.update({'vendor/' + name: data for name, data in sources('native/app/vendor').items()})
+    service['app-inventory.js'] = (ROOT / 'native/service/app-inventory.js').read_bytes()
     service['websocket.js'] = (ROOT / 'native/app/websocket.js').read_bytes()
     info = json.loads(app['appinfo.json'])
     version = version_number(version or info['version'])

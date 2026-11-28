@@ -24,9 +24,7 @@ body {
   );
 }
 header,
-.header-actions,
 .brand,
-.section-heading,
 .actions {
   display: flex;
   align-items: center;
@@ -46,10 +44,6 @@ header {
   height: 3.8vw;
   margin-right: 1vw;
   border-radius: 0.85vw;
-}
-#clock {
-  margin-right: 1.4vw;
-  color: #c9d3cb;
 }
 main {
   padding: 2vw 5vw 4.5vw;
@@ -75,8 +69,7 @@ p {
   line-height: 1.4;
   color: #c7d0ca;
 }
-#notice:empty,
-#gridHint:empty {
+#notice:empty {
   display: none;
 }
 #notice {
@@ -133,42 +126,4 @@ button:disabled {
 }
 .actions button {
   margin: 0 0.65vw 0.25vw 0;
-}
-.section-heading {
-  justify-content: space-between;
-  margin: 1vw 0;
-}
-#gridHint {
-  margin: 0 0 1.1vw;
-}
-#appGrid {
-  display: flex;
-  flex-wrap: wrap;
-  margin-right: -1.15vw;
-  align-items: stretch;
-}
-#appGrid button {
-  width: calc(25% - 1.15vw);
-  margin: 0 1.15vw 1.15vw 0;
-  min-height: 8.4vw;
-  font-size: 1.7vw;
-  font-weight: 500;
-  padding: 1.2vw;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  overflow-wrap: break-word;
-  background: #2d3b43;
-}
-#appGrid button:nth-child(4n + 2) {
-  background: #37403e;
-}
-#appGrid button:nth-child(4n + 3) {
-  background: #353b49;
-}
-#appGrid button:nth-child(4n + 4) {
-  background: #3c3938;
-}
-#libraryActions {
-  margin-top: 0.7vw;
 }

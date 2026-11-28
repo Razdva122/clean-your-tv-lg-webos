@@ -9,14 +9,12 @@
   <body>
     <header>
       <div class="brand"><img src="icon.png" alt="" />Clean Your TV</div>
-      <div class="header-actions">
-        <time id="clock"></time><button id="settings"></button>
-      </div>
+      <button id="back" hidden></button>
     </header>
     <main>
       <h1 id="title"></h1>
       <p id="notice" role="status" aria-live="polite"></p>
-      <section id="pairArea" class="panel" hidden>
+      <section id="pairArea" class="panel">
         <h2 id="pairHeading"></h2>
         <p id="pairStatus"></p>
         <div class="actions">
@@ -35,17 +33,6 @@
           <button id="enableStartup"></button><button id="stop"></button>
         </div>
       </section>
-      <section id="libraryArea" hidden>
-        <div class="section-heading">
-          <h2 id="libraryHeading"></h2>
-          <button id="editLayout"></button>
-        </div>
-        <p id="gridHint"></p>
-        <div id="appGrid"></div>
-      </section>
-      <div id="libraryActions" class="actions" hidden>
-        <button id="restoreApps"></button><button id="retryCatalog"></button>
-      </div>
     </main>
     <script src="app.js"></script>
   </body>

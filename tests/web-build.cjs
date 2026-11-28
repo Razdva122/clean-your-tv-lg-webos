@@ -7,12 +7,14 @@ const acorn = require('acorn');
   const source = {
     'index.html':
       '<html><head><title>Test</title></head><body><script src="app.js"></script><script>const inline = () => 7; window.inlineResult = inline();</script></body></html>',
+    'setup/index.html': '<html><head></head><body></body></html>',
     'app.js':
       'const app = {title: "Test"}; window.result = [app].findIndex(x => x?.title === "Test"); window.copy = Object.assign({}, app); window.includes = [1, 2].includes(2);',
     'style.css': '.viewport {position:absolute;inset:0;color:#1234}',
     'apps.js': 'window.TV_APPS = {apps: []};'
   };
   const output = await compile(source);
+  assert.match(output['setup/index.html'], /src="\.\.\/compat-polyfills\.js"/);
   acorn.parse(output['app.js'], { ecmaVersion: 5 });
   // ES5-valid, but Chrome 38 (webOS 3.x) throws on strict block function declarations.
   const blockFn = (

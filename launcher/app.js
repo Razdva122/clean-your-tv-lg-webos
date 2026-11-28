@@ -937,6 +937,10 @@
     pickerButtons.push(pickerClose);
     focusPicker(next);
   }
+  function installedApps(callback, priorityIds) {
+    if (window.PilotHome) window.PilotHome.installed(callback);
+    else AppLibrary.installed(callback, priorityIds);
+  }
   function openPicker() {
     if (moveState || pickerOpen) {
       return;
@@ -953,7 +957,7 @@
     focusPicker(0);
     setFocusZone('picker');
     refreshInputStatus();
-    AppLibrary.installed(function (apps, installedIds) {
+    installedApps(function (apps, installedIds) {
       if (!pickerOpen || generation !== pickerGeneration) {
         return;
       }
@@ -994,7 +998,7 @@
       : ids;
   }
   function refreshInstalledApps(first) {
-    AppLibrary.installed(function (apps, installedIds) {
+    installedApps(function (apps, installedIds) {
       if (apps !== null) {
         try {
           library.refresh(apps, installedIds);
@@ -1019,13 +1023,15 @@
     }, visibleAppIds(first));
   }
   function initializeApps() {
-    library = AppLibrary.create(
-      localStorage,
-      (window.TV_APPS && TV_APPS.apps) || [],
-      CONFIG,
-      inputSources && inputSources.list,
-      window.HomePackagedInventory
-    );
+    library = window.PilotHome
+      ? window.PilotHome.library
+      : AppLibrary.create(
+          localStorage,
+          (window.TV_APPS && TV_APPS.apps) || [],
+          CONFIG,
+          inputSources && inputSources.list,
+          window.HomePackagedInventory
+        );
     var firstInput = library.firstInput();
     if (firstInput && !library.input(firstInput))
       initialInputFocus = firstInput;
@@ -1189,7 +1195,7 @@
       true
     );
     rebuild();
-    refreshInstalledApps();
+    if (!window.PilotHome) refreshInstalledApps();
   }
   // Tile rendering, icon colors and grid geometry.
   function createTile(app) {
@@ -2123,7 +2129,8 @@
       if (tile.input.appId === focusedId) next = index;
     });
     shelf.hidden = !shelfTiles.length;
-    topButtons[0].hidden = !shelf.hidden;
+    topButtons[0].hidden =
+      !shelf.hidden || (!!window.PilotHome && !inputSources);
     if (topButtons[0].hidden && focusZone === 'inputs') closeInputs();
     if (topButtons[0].hidden && focusZone === 'top' && focusedTopButton === 0)
       focusTopButton(1);
