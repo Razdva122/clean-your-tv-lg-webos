@@ -3,6 +3,25 @@
   "version": null,
   "changes": [
     {
+      "pr": 861,
+      "issues": [
+        410
+      ],
+      "summary": "Show the CLI uninstall command before pending-install recovery"
+    },
+    {
+      "pr": 862,
+      "issues": [
+        101
+      ],
+      "summary": "Record verified Root setup on LG OLED65C2AUA"
+    },
+    {
+      "pr": 865,
+      "issues": [],
+      "summary": "Defer the LG screensaver while the inline CYTV saver is visible"
+    },
+    {
       "pr": 867,
       "issues": [
         741
@@ -28,6 +47,16 @@
       "pr": 872,
       "issues": [],
       "summary": "Run Intel macOS installer tests in two isolated workers"
+    },
+    {
+      "pr": 873,
+      "issues": [],
+      "summary": "Add opt-in controls for LG debug and fault log uploads"
+    },
+    {
+      "pr": 874,
+      "issues": [],
+      "summary": "Add optional Root blocking for LG ad and tracking domains"
     },
     {
       "pr": 879,
