@@ -2769,6 +2769,69 @@ fs.readFileSync=function(file){
         self.legacy_home()
         return cmdline
 
+    def first_postboot_package_removal_fixture(self):
+        self.terminal_service_restart_fixture()
+        apps = self.cleanup.APPS[:2]
+        self.remote.apps = set(apps)
+        self.store.checkpoint(self.profile, stage='requested', removals={})
+        history = self.root / 'developer/.cytv-installer/operations' / ('a' * 32)
+        history.mkdir(parents=True)
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertFalse(self.vendor_removals())
+        self.reboot()
+        return apps
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_first_postboot_pass_uses_its_new_package_terminals_without_an_extra_retry(self):
+        apps = self.first_postboot_package_removal_fixture()
+        result = self.remove()
+        self.assertTrue(result['verified_clean'], result)
+        self.assertEqual(self.vendor_removals(), list(apps))
+        self.assertIsNone(self.store.pending(self.profile))
+        observed = self.store.diagnostic_removal['cleanup_restart_evidence']
+        self.assertTrue(observed['kernel_changed'])
+        self.assertTrue(observed['terminal_cleanup'])
+        self.assertTrue(observed['all_targets_terminal'])
+        self.assertTrue(observed['project_catalog_absent'])
+        self.assertTrue(observed['allow_opaque'])
+        self.assertEqual(observed['decision'], 'completed')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_new_terminals_do_not_cover_a_surviving_catalog_entry_or_project_process(self):
+        apps = self.first_postboot_package_removal_fixture()
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            value = original(uri, payload, **options)
+            if uri.endswith('/dev/remove') and payload['id'] == apps[1]:
+                self.remote.apps.add(apps[1])
+            return value
+        self.remote.luna = vendor
+        with self.assertRaises(UserError):
+            self.remove()
+        observed = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertFalse(observed['project_catalog_absent'])
+        self.assertFalse(observed['terminal_cleanup'])
+        self.remote.apps.clear()
+        (self.root / 'proc/987654/cmdline').write_bytes(b'com.gathin.tvhome.renewal\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertTrue(self.store.pending(self.profile)['cleanup_restart_evidence']['project_running'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_new_terminals_without_a_changed_kernel_still_require_restart_proof(self):
+        self.first_postboot_package_removal_fixture()
+        self.remote.boot = '11111111-1111-1111-1111-111111111111'
+        proof = self.store.pending(self.profile)['cleanup_boot_proof']
+        with self.assertRaises(UserError):
+            self.remove()
+        observed = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertFalse(observed['kernel_changed'])
+        self.assertFalse(observed.get('allow_opaque', False))
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], proof)
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+
     @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_terminal_services_finish_after_one_restart_with_opaque_processes(self):
         self.terminal_service_restart_fixture()
