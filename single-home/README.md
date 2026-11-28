@@ -1,6 +1,6 @@
 # Single-package Home pilot
 
-The private 1080p pilot has one tile and one bundled JavaScript service. It runs alongside existing editions using the development ID `io.github.razdva122.cytvhomepilot`. The first screen supports Russian and English. Home opens from its tile. The physical Home button keeps its system behavior.
+The private 1080p pilot has one tile and one bundled JavaScript service. It runs alongside existing editions using the development ID `io.github.razdva122.cytvhomepilot`. The pilot has a separate Russian/English test interface in `single-home/app/`. The product interface in `launcher/`, including its themes, wallpaper and layout controls, still needs to be connected to the bundled service for release. Home opens from its tile. The physical Home button keeps its system behavior.
 
 After installing the project dependencies, build from the checkout root using the project Python environment. Runtime sources must be in the Git index. Select a new output path for each build.
 

@@ -2,7 +2,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
 const { chromium } = require('playwright');
 const app = path.resolve(__dirname, '../app');
 const service = 'luna://io.github.razdva122.cytvhomepilot.service/';
@@ -86,7 +85,14 @@ assert.ok(fs.existsSync(entry), 'the Home tile opens its own first-run screen');
       },
       { service }
     );
-    await page.goto(pathToFileURL(entry).href);
+    // Storage on a file URL can have a different origin after reload in Chromium.
+    await page.route('http://home.test/**', (route) => {
+      const file = new URL(route.request().url()).pathname.slice(1);
+      if (!['index.html', 'app.js', 'style.css', 'icon.png'].includes(file))
+        return route.fulfill({ status: 404 });
+      return route.fulfill({ path: path.join(app, file) });
+    });
+    await page.goto('http://home.test/index.html');
     const el = (id) => page.locator('#' + id);
     const rpcCount = (method) =>
       page.evaluate(
@@ -150,7 +156,7 @@ assert.ok(fs.existsSync(entry), 'the Home tile opens its own first-run screen');
     await tiles.first().click();
     assert.equal(await tiles.count(), 0);
     await page.reload();
-    await el('settings').waitFor();
+    await el('restoreApps').waitFor();
     assert.equal(
       await tiles.count(),
       0,
