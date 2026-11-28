@@ -446,6 +446,20 @@ class GuiTests(unittest.TestCase):
         w.receive('debloat-results', {'homePromotion': 'unverified', 'contentRecommendation': 'write-rejected', 'aiNudge': 'firmware-blocked'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertFalse(w.reading.isHidden())
+        from PySide6.QtCore import QUrl
+        guide = debloat.privacy_guide('aiNudge', 'firmware-blocked')
+        self.assertEqual(w.content.toPlainText().count('Open privacy guide'), 2)
+        self.assertIn('href="' + guide + '"', w.content.toHtml())
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=True) as opened:
+            w.content.anchorClicked.emit(QUrl(guide))
+            w.content.anchorClicked.emit(QUrl('https://example.invalid/other'))
+            opened.assert_called_once_with(QUrl(guide))
+        w.receive('debloat-guide', ('lmt', 'restore-rejected'))
+        restore_guide = debloat.privacy_guide('lmt', 'restore-rejected')
+        self.assertIn('href="' + restore_guide + '"', w.details.toHtml())
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=True) as opened:
+            w.details.anchorClicked.emit(QUrl(restore_guide))
+            opened.assert_called_once_with(QUrl(restore_guide))
         self.assertIn('Home Settings → Content Recommendation', w.content.toPlainText())
         self.assertNotIn('Home Settings → Home Promotion', w.content.toPlainText())
         self.assertIn('The result could not be verified.', w.content.toPlainText())

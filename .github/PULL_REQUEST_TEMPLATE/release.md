@@ -63,6 +63,11 @@ Use timestamps with a UTC offset and include failed and cancelled attempts. -->
 
 - Release task handed to agent: <!-- Timestamp -->
 - Candidate: <!-- RC number or commit -->
+- Project TV window: <!-- At CI dispatch, record the expected window and case IDs, or link reused evidence if no device work is selected. -->
+- Candidate artifact ready: <!-- Actual timestamp and run/attempt -->
+- Artifact audit complete: <!-- Actual timestamp -->
+- Device window opened: <!-- Actual timestamp if selected -->
+- Device checks started: <!-- Actual timestamp if selected -->
 
 | Stage | Started | Ended | Elapsed | Outcome / evidence |
 | --- | --- | --- | --- | --- |

@@ -212,6 +212,8 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 
 Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
+Si le téléviseur refuse un réglage, consultez le [guide de confidentialité à la télécommande pour votre modèle (en anglais)](../PRIVACY.md).
+
 Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage.
 
 Pour annuler une seule modification, ouvrez Debloat dans Maintenance avec la même connexion enregistrée au téléviseur. Choisissez le réglage, vérifiez sa valeur d’origine et confirmez. Sur les modèles compatibles, désactivez le démarrage automatique de LG Channels dans Tous les paramètres → Général → Chaînes → Démarrage automatique de LG Channels.

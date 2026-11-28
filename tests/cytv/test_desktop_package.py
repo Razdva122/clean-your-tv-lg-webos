@@ -171,8 +171,10 @@ class ConsoleMediaExclusionTests(unittest.TestCase):
         from contextlib import nullcontext
         root=Path(__file__).resolve().parents[2]
         build=runpy.run_path(str(root/'scripts/build-cytv.py'))
-        with patch.dict(build['main'].__globals__,{'_payload_build':lambda:nullcontext(root/'payload-fixture')}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
+        payload_build = Mock(return_value=nullcontext(root/'payload-fixture'))
+        with patch.dict(build['main'].__globals__,{'_payload_build':payload_build}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
             build['main']()
+        payload_build.assert_called_once_with(single_tile=False)
         freeze=invoke.call_args_list[0].args[0]
         self.assertIn('--exclude-module',freeze)
         self.assertEqual(freeze[freeze.index('--exclude-module')+1],'imageio_ffmpeg')

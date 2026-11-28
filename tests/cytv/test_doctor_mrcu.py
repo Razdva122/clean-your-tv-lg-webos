@@ -40,6 +40,10 @@ class DoctorMrcuTests(unittest.TestCase):
             (['remote'], (773,), 'unique 1 0'),
             (['remote'], (), 'unique 0 0'),
             (['remote', 'denied'], (), 'unavailable'),
+            (['stale'], (), 'missing'),
+            (['stale'] * 9 + ['remote'] + ['stale'] * 10, (773, 412), 'unique 1 1'),
+            (['remote', 'registered'], (773, 412), 'unavailable'),
+            (['remote', 'no-registry'], (773, 412), 'unavailable'),
         ):
             with self.subTest(names=names, keys=keys):
                 def open_event(path, flags):
@@ -47,7 +51,23 @@ class DoctorMrcuTests(unittest.TestCase):
                     index = int(os.path.basename(path)[5:])
                     if names[index] == 'denied':
                         raise PermissionError(errno.EACCES, 'private')
+                    if names[index] in ('stale', 'registered', 'no-registry'):
+                        raise OSError(errno.ENXIO, 'private')
                     return index + 10
+
+                def device_node(path):
+                    if path.startswith('/sys/dev/char/13:'):
+                        index = int(path.rsplit(':', 1)[1]) - 64
+                        if names[index] == 'registered':
+                            return SimpleNamespace(st_mode=stat.S_IFLNK)
+                        raise FileNotFoundError(errno.ENOENT, 'private')
+                    index = int(os.path.basename(path)[5:])
+                    return SimpleNamespace(st_mode=stat.S_IFCHR, st_rdev=os.makedev(13, 64 + index))
+
+                def sysfs(path):
+                    if path == '/sys/dev/char' and 'no-registry' not in names:
+                        return SimpleNamespace(st_mode=stat.S_IFDIR)
+                    raise FileNotFoundError(errno.ENOENT, 'private')
 
                 def query(fd, request, buf, mutate=True):
                     if request == 0x81004506:
@@ -63,11 +83,12 @@ class DoctorMrcuTests(unittest.TestCase):
                 with patch('os.listdir', return_value=['event'+str(i) for i in range(len(names))]), \
                      patch('os.open', side_effect=open_event), patch('os.close') as close, \
                      patch('os.fstat', return_value=SimpleNamespace(st_mode=stat.S_IFCHR)), \
+                     patch('os.lstat', side_effect=device_node), patch('os.stat', side_effect=sysfs), \
                      patch.object(fcntl, 'ioctl', side_effect=query), patch('builtins.print') as output:
                     exec(PROBE, {})
                 output.assert_called_once_with(expected)
                 self.assertCountEqual([call.args[0] for call in close.call_args_list],
-                                      [10+i for i, name in enumerate(names) if name != 'denied'])
+                                      [10+i for i, name in enumerate(names) if name in ('other', 'remote')])
 
     def test_root_doctor_saves_observation_even_if_home_preflight_fails(self):
         from cytv import cli, doctor_mrcu

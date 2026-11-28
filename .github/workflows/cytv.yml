@@ -38,6 +38,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Replay affected guardian shutdown scenarios before platform builds
+        if: inputs.full_candidate && github.ref == 'refs/heads/release/next'
+        run: python scripts/check-candidate-guardian.py
       - name: Check release input boundaries and README before candidate builds
         if: inputs.full_candidate
         run: |
@@ -52,6 +55,11 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('homebrew_required='+str(selected).lower()+'\n')
           PY
+      - name: Verify packaged Engine transition against the latest stable release
+        if: steps.scope.outputs.full == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check-engine-transition.py
   validation:
     needs: scope
     if: needs.scope.outputs.installers == 'true'
@@ -267,8 +275,13 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           GH_TOKEN: ${{ github.token }}
         run: python scripts/ci-test-evidence.py plan --kind desktop --os "${{ matrix.os }}" --units installer-host --directory "${{ runner.temp }}/ci-evidence"
+      - name: Test Intel macOS desktop installer host behavior in parallel
+        if: steps.evidence.outputs.fresh == 'true' && matrix.os == 'macos-15-intel'
+        run: bash scripts/test-intel-installer.sh "$RUNNER_TEMP/test-timings"
+        env:
+          QT_QPA_PLATFORM: offscreen
       - name: Test desktop installer host behavior
-        if: steps.evidence.outputs.fresh == 'true'
+        if: steps.evidence.outputs.fresh == 'true' && matrix.os != 'macos-15-intel'
         run: python scripts/test-shard.py -s tests/cytv -v --timings "${{ runner.temp }}/test-timings/cytv.json"
         env:
           QT_QPA_PLATFORM: offscreen

@@ -182,7 +182,9 @@ class FailureJourneys(unittest.TestCase):
     def test_root_blocker_is_saved_and_offers_access_handoff(self):
         profile = state.target(self.profile['host'], 'no-root')
         pending = self.store.request_clean_removal(profile)
-        installer = operations.Installer(Mock(), self.store, profile, self.store.root, {}, self.write)
+        remote = Mock()
+        remote.luna.return_value = {'apps': []}
+        installer = operations.Installer(remote, self.store, profile, self.store.root, {}, self.write)
         with patch('cytv.no_root_cleanup._device', return_value={
                 'schema':1, 'root_present':['Root state'], 'present':[], 'blocked':[]}):
             with self.assertRaises(UserError):
@@ -433,6 +435,7 @@ class RemovalContinuation(unittest.TestCase):
         original = store.pending(profile)
         pending = store.request_clean_removal(profile)
         remote = Mock()
+        remote.luna.return_value = {'apps': []}
         remote.run.side_effect = UserError('PRIVATE NETWORK', reason_code='connection-interrupted')
         installer = operations.Installer(remote, store, profile, temp.name, {}, lambda _:None)
         installer.reconnect = Mock(return_value=remote)

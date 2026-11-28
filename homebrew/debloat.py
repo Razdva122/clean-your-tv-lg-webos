@@ -65,12 +65,17 @@ def write_setting(invoke, category, key, value):
 
 
 def change_settings(action, keys, store, settings, invoke):
+    from cytv.debloat_policy import guide_section
+
     results, status = {}, {}
     restore = action == 'debloat-restore'
 
     def record(key, actual, outcome):
         results[key] = outcome
         status[key] = {'value': actual, 'saved': key in settings}
+        section = guide_section(key, outcome)
+        if section:
+            status[key]['guide'] = section
 
     for key in keys:
         category, _, target = SETTINGS[key]
@@ -94,7 +99,9 @@ def change_settings(action, keys, store, settings, invoke):
             error = write_setting(invoke, category, key, wanted)
             actual = read_settings(invoke, category, [key], 1).get(key)
             if error:
-                record(key, actual, 'restore-failed' if restore else error)
+                if restore:
+                    error = 'restore-rejected' if error == 'write-rejected' else 'restore-failed'
+                record(key, actual, error)
                 continue
             if actual != wanted:
                 sleep(0.25)

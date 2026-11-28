@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,6 +63,67 @@ class CIShards(unittest.TestCase):
             self.assertEqual(sorted(inventories), [f'test_cases.Cases.test_{i}' for i in range(9)])
             whole = self.run_shard(root, '1/1', '--list')
             self.assertEqual(json.loads(whole.stdout), sorted(inventories))
+
+    def test_parallel_intel_workers_overlap_and_propagate_each_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            for script in ('test-shard.py', 'ci_test_timing.py'):
+                shutil.copy(ROOT / 'scripts' / script, root / 'scripts')
+            suite = root / 'tests/cytv'
+            suite.mkdir(parents=True)
+            (suite / 'test_workers.py').write_text(textwrap.dedent("""
+                import os, time, unittest
+                from pathlib import Path
+
+                class Workers(unittest.TestCase):
+                    def meet(self, name, peer):
+                        shared = Path(os.environ['MEETING'])
+                        (shared / name).write_text(str(Path.cwd()))
+                        end = time.monotonic() + 5
+                        while not (shared / peer).exists() and time.monotonic() < end:
+                            time.sleep(.01)
+                        self.assertNotEqual(str(Path.cwd()), (shared / peer).read_text())
+                        self.assertEqual(Path('node_modules/installed').read_text(), 'yes')
+                        self.assertNotEqual(name, os.environ['FAIL_WORKER'])
+
+                    def test_a(self):
+                        self.meet('a', 'b')
+
+                    def test_b(self):
+                        self.meet('b', 'a')
+                """))
+            # Exercise the documented relative interpreter and timing path in both checkouts.
+            interpreter = root / '.venv-cytv/bin/python'
+            interpreter.parent.mkdir(parents=True)
+            interpreter.write_text('#!/usr/bin/env bash\nexec "$FIXTURE_PYTHON" "$@"\n')
+            interpreter.chmod(0o755)
+            (root / 'node_modules').mkdir()
+            (root / 'node_modules/installed').write_text('yes')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            subprocess.run(['git', 'add', 'scripts', 'tests'], cwd=root, check=True)
+            subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid',
+                            'commit', '--no-gpg-sign', '-qm', 'fixture'], cwd=root, check=True)
+            for failing_worker in ('', 'a', 'b'):
+                with self.subTest(failing_worker=failing_worker):
+                    timings = root / ('timings-' + failing_worker)
+                    result = subprocess.run(
+                        ['bash', str(ROOT / 'scripts/test-intel-installer.sh'), timings.name],
+                        cwd=root, env={**os.environ, 'PYTHON': '.venv-cytv/bin/python',
+                                       'FIXTURE_PYTHON': sys.executable,
+                                       'FAIL_WORKER': failing_worker, 'MEETING': str(root),
+                                       'GITHUB_STEP_SUMMARY': ''}, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, int(bool(failing_worker)), result.stderr)
+                    reports = [json.loads(path.read_text()) for path in sorted(timings.glob('*.json'))]
+                    self.assertEqual([report['shard'] for report in reports], ['1/2', '2/2'])
+                    for report, worker in zip(reports, 'ab'):
+                        self.assertEqual(report['successful'], worker != failing_worker)
+                        self.assertEqual([row['id'] for row in report['tests']],
+                                         [f'test_workers.Workers.test_{worker}'])
+                        (root / worker).unlink()
+                    worktrees = subprocess.check_output(['git', 'worktree', 'list', '--porcelain'],
+                                                       cwd=root, text=True)
+                    self.assertEqual(worktrees.count('worktree '), 1)
 
     def test_failures_and_import_errors_are_not_hidden_by_partition(self):
         self.assertTrue(RUNNER.exists(), 'A unittest shard runner is required')

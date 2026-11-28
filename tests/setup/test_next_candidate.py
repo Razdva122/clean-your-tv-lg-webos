@@ -78,6 +78,13 @@ class NextCandidateTests(unittest.TestCase):
         self.assertEqual((pr['head'], pr['base']), ('release/next', 'main'))
         self.assertIn('1.3.8', pr['body'])
         self.assertIn('0.1.7-preview / 8', pr['body'])
+        timing_section = pr['body'].split('## Release timings', 1)[1].split('## Release gates', 1)[0]
+        self.assertIn('Project TV window', timing_section)
+        self.assertIn('Candidate artifact ready', timing_section)
+        self.assertIn('Artifact audit complete', timing_section)
+        self.assertIn('Device window opened', timing_section)
+        self.assertIn('Device checks started', timing_section)
+        self.assertIn(timing_section, flow.replace_record(pr['body'], 'Updated build'))
         self.assertIn('TBD', pr['body'])
         self.assertIn('not', pr['body'].lower())
 

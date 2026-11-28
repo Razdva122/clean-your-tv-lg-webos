@@ -30,6 +30,7 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private val ui = Handler(Looper.getMainLooper())
     @Volatile private var inspecting = false
+    private val privacyGuide = Regex("""https://github\.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/PRIVACY(?:\.ru)?\.md#[a-z-]+""")
     private val entry = "file:///android_asset/ui/index.html"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,7 +79,18 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = request?.url.toString() != entry
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url ?: return true
+                if (request.isForMainFrame && request.hasGesture() && privacyGuide.matches(url.toString())) {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, url))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        android.app.AlertDialog.Builder(this@MainActivity)
+                            .setMessage(url.toString()).setPositiveButton(android.R.string.ok, null).show()
+                    }
+                }
+                return url.toString() != entry
+            }
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val url = request?.url.toString()
                 if (url.startsWith("file:///android_asset/ui/")) return null

@@ -1,6 +1,8 @@
 # Clean Your TV tile — unreleased
 
-The Clean Your TV tile is an unpublished Homebrew Channel candidate for compatible Root TVs.
+The Clean Your TV tile is an unpublished Homebrew Channel candidate for compatible,
+already-rooted TVs. It can install Root or offer No-root when its compatibility checks
+select that edition.
 The current public installation paths are the desktop and Android installers.
 The candidate and its catalog draft still require exact-package TV acceptance,
 public asset verification, screenshots, human review and catalog approval.

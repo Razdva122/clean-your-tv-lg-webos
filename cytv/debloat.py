@@ -7,9 +7,10 @@ import time
 from . import prompts
 from .debloat_policy import GROUPS, SETTINGS
 from .errors import UserError, TVRejected
-from .i18n import translate as tr
+from .i18n import resolved_language, translate as tr
 from .state import private_write
 from .tv import SSAP
+from . import debloat_policy
 
 TITLE = 'Debloat'
 SELECT = 'Select Debloat settings: '
@@ -49,6 +50,7 @@ RESTORE_RESULTS = {
     'restore-already': ('✓', '#b4ada4', 'Already at the saved original value'),
     'restore-unavailable': ('–', '#b4ada4', 'Could not read the current value'),
     'restore-unverified': ('?', '#b4ada4', 'Could not verify the restored value'),
+    'restore-rejected': ('×', '#ff8580', 'The TV rejected the request to restore this setting.'),
     'restore-failed': ('×', '#ff8580', 'Could not restore the setting'),
 }
 RESULTS.update(RESTORE_RESULTS)
@@ -73,6 +75,22 @@ try {
 } catch (error) {}
 process.stdout.write(JSON.stringify(value));
 '''
+
+
+def privacy_guide(key, status):
+    section = debloat_policy.guide_section(key, status)
+    if section:
+        guide = 'PRIVACY.ru.md' if resolved_language() == 'ru' else 'PRIVACY.md'
+        return f'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/{guide}#{section}'
+
+
+def report_guide(write, key, status):
+    guide = privacy_guide(key, status)
+    if guide:
+        if write.frontend == 'desktop':
+            write.debloat_guide(key, status)
+        else:
+            write.raw(guide)
 
 
 def result_message(key, status):
@@ -115,9 +133,18 @@ def read_current(remote, category, key, tv):
 
 def set_value(remote, tv, category, key, value):
     payload = {'category': category, 'settings': {key: value}}
-    if tv is not None:
-        return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
-    return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+    try:
+        if tv is not None:
+            return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
+        return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+    except TVRejected:
+        return {'returnValue': False}
+    except UserError as exc:
+        if exc.reason_code == 'ssap-request-rejected':
+            return {'returnValue': False}
+    except Exception:
+        pass
+    return None
 
 
 def verify_value(remote, tv, category, key, value, previous):
@@ -223,13 +250,12 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
             elif current is None:
                 status = 'restore-unavailable'
             elif current == target and (remote.root or tv is not None):
-                try:
-                    reply = set_value(remote, tv, category, key, original)
-                except Exception:
-                    reply = None
+                reply = set_value(remote, tv, category, key, original)
                 if isinstance(reply, dict) and reply.get('returnValue') is True:
                     actual = verify_value(remote, tv, category, key, original, current)
                     status = 'restored' if actual == original else 'restore-unverified'
+                elif isinstance(reply, dict) and reply.get('returnValue') is False:
+                    status = 'restore-rejected'
                 else:
                     status = 'restore-failed'
             else:
@@ -238,6 +264,7 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
             if status in ('restore-already', 'restored'):
                 del remaining[key]
             write(f'{tr(SETTING_NAMES[key])} — {tr(RESTORE_RESULTS[status][2])}')
+            report_guide(write, key, status)
 
     if remaining == entries:
         return maintenance
@@ -306,15 +333,7 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 except Exception:
                     events[key] = 'journal-failed'
                     continue
-            try:
-                reply = set_value(remote, tv, category, key, target)
-            except TVRejected:
-                events[key] = 'write-rejected'
-                continue
-            except Exception as exc:
-                rejected = isinstance(exc, UserError) and exc.reason_code == 'ssap-request-rejected'
-                events[key] = 'write-rejected' if rejected else 'write-unavailable'
-                continue
+            reply = set_value(remote, tv, category, key, target)
             if not isinstance(reply, dict) or reply.get('returnValue') is not True:
                 rejected = isinstance(reply, dict) and reply.get('returnValue') is False
                 events[key] = 'write-rejected' if rejected else 'write-unavailable'
@@ -382,13 +401,12 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     except (OSError, ValueError):
         write.error('Could not apply Debloat settings.')
         return
-    if not installer.remote.root:
-        # The factory SSAP allowlist on this model and firmware excludes all Debloat keys (#610).
-        known_firmware_block = (installer.tv_info.get('modelName') == '55UK7500PSA'
-                                and installer.tv_info.get('firmwareVersion') == '05.50.70')
-        for key in results:
-            if events[key] == 'write-rejected':
-                results[key] = 'firmware-blocked' if known_firmware_block else 'write-rejected'
+    # The factory SSAP allowlist on this model and firmware excludes all Debloat keys (#610).
+    known_firmware_block = (not installer.remote.root and installer.tv_info.get('modelName') == '55UK7500PSA'
+                            and installer.tv_info.get('firmwareVersion') == '05.50.70')
+    for key in results:
+        if events.get(key) == 'write-rejected':
+            results[key] = 'firmware-blocked' if known_firmware_block else 'write-rejected'
     if write.frontend == 'desktop':
         write.debloat_results(results)
         prompts.answer(ask, REVIEW)
@@ -397,6 +415,7 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
         for key, status in results.items():
             icon = RESULTS[status][0]
             write(f'{icon} {tr(SETTINGS[key][1])} — {result_message(key, status)}')
+            report_guide(write, key, status)
         if write.frontend == 'android':
             write.option('1', CONTINUE)
         if not maintenance:
