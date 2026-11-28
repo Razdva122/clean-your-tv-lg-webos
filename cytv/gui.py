@@ -179,7 +179,7 @@ class Wizard(QMainWindow):
         self.content = QTextBrowser()
         self.content.setOpenExternalLinks(False)
         self.content.setOpenLinks(False)
-        self.content.anchorClicked.connect(lambda url: self.show_reference(url.path()) if url.scheme() == 'guide' else None)
+        self.content.anchorClicked.connect(self.open_content_link)
         self.content.document().setDefaultStyleSheet(
             'p { margin-top: 6px; margin-bottom: 12px; line-height: 140%; } '
             'h3 { color: #f3ede3; font-size: 16px; margin-top: 12px; margin-bottom: 10px; }')
@@ -209,6 +209,8 @@ class Wizard(QMainWindow):
         self.details_toggle.toggled.connect(self.toggle_details)
         self.details = QTextBrowser()
         self.details.setOpenExternalLinks(False)
+        self.details.setOpenLinks(False)
+        self.details.anchorClicked.connect(self.open_content_link)
         self.details.setAccessibleName(tr('Details'))
         reading_layout.addWidget(self.details)
         reading_layout.addStretch()
@@ -527,6 +529,19 @@ class Wizard(QMainWindow):
                 return path
         return None
 
+    @staticmethod
+    def debloat_link(url):
+        return f'<a href="{html.escape(url)}" style="color:#9acaff">{html.escape(tr("Open privacy guide"))}</a>'
+
+    def open_content_link(self, url):
+        if url.scheme() == 'guide':
+            self.show_reference(url.path())
+        elif any(debloat.privacy_guide(key, status) == url.toString()
+                 for key, status in self.debloat_results.items()):
+            if not QDesktopServices.openUrl(url):
+                self.content.append(html.escape(tr('Could not open the browser. Open the displayed link manually.')))
+                self.content.append(html.escape(url.toString()))
+
     def show_reference(self, name):
         path = self.guide_path(name)
         if path is None:
@@ -692,6 +707,15 @@ class Wizard(QMainWindow):
             self.rail_title.setText(tr('Reinstall Root using this installer'))
         elif kind == 'ssh-command-result':
             self.ssh_command_result = value
+        elif kind == 'debloat-guide':
+            key, status = value
+            guide = debloat.privacy_guide(key, status)
+            if guide:
+                self.debloat_results[key] = status
+                markup = self.debloat_link(guide)
+                self.content.append(markup)
+                self.details.append(markup)
+                self.details_toggle.show()
         elif kind == 'debloat-results':
             self.debloat_results = dict(value)
         elif kind == 'installation-settings':
@@ -1250,7 +1274,7 @@ class Wizard(QMainWindow):
                 text = WrappedLabel(tr(label))
                 toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
                 toggle.setObjectName('debloat-' + key)
-                toggle.setChecked(not maintenance)
+                toggle.setChecked(not maintenance and key not in debloat.LOG_UPLOADS)
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)
@@ -1308,6 +1332,9 @@ class Wizard(QMainWindow):
             name = debloat.SETTING_NAMES[key] if status in debloat.RESTORE_RESULTS else debloat.SETTINGS[key][1]
             label = html.escape(tr(name))
             message = html.escape(debloat.result_message(key, status))
+            guide = debloat.privacy_guide(key, status)
+            if guide:
+                message += '<br>' + self.debloat_link(guide)
             rows.append(f'<tr><td width="32" valign="top" style="color:{color}">{icon}</td>'
                         f'<td><span style="color:#f3ede3;font-weight:600">{label}</span><br>'
                         f'<small>{message}</small></td></tr>')

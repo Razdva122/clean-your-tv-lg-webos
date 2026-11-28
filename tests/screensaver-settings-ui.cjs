@@ -111,6 +111,20 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             const method = uri.split('/').pop();
             const payload = JSON.parse(raw);
             calls.push({ uri, method, payload });
+            if (method === 'registerScreenSaverRequest') {
+              window.lgRequests = this;
+              this.cancel = () => {
+                window.lgRequests = null;
+              };
+              this.onservicecallback(
+                JSON.stringify({ returnValue: true, subscribed: true })
+              );
+              return;
+            }
+            if (method === 'responseScreenSaverRequest') {
+              this.onservicecallback(JSON.stringify({ returnValue: true }));
+              return;
+            }
             const statusBusy = method === 'screensaverStatus' && busyStatus > 0;
             const savingBusy =
               method === 'screensaverConfigure' && busyConfigure > 0;
@@ -1000,8 +1014,47 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           [],
           'the iframe uses the existing renderer without a popup request'
         );
+        await page.clock.runFor(6000);
+        assert.equal(
+          await page.evaluate(
+            () =>
+              calls.filter((c) => c.method === 'registerScreenSaverRequest')
+                .length
+          ),
+          1,
+          'renderer heartbeat keeps the original subscription alive'
+        );
+        const responses = await page.evaluate(() => {
+          if (!window.lgRequests) return [];
+          for (const [state, timestamp] of [
+            ['Active', '4294967200'],
+            ['Active', '10'],
+            ['Screen Off', '20']
+          ]) {
+            lgRequests.onservicecallback(
+              JSON.stringify({ returnValue: true, state, timestamp })
+            );
+          }
+          return calls
+            .filter((call) => call.method === 'responseScreenSaverRequest')
+            .map((call) => call.payload);
+        });
+        assert.deepEqual(
+          responses.map(({ ack, timestamp }) => [ack, timestamp]),
+          [
+            [false, '4294967200'],
+            [false, '10'],
+            [true, '20']
+          ],
+          'visible inline saver defers successive Active requests and yields on other states'
+        );
         await page.keyboard.press('ArrowLeft');
         await inline.waitFor({ state: 'detached' });
+        assert.equal(
+          await page.evaluate(() => window.lgRequests),
+          null,
+          'dismissal cancels the LG subscription'
+        );
         assert.equal(
           await page.locator('#screensaverPreview').isEnabled(),
           true
@@ -1061,6 +1114,23 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             calls.some(({ method }) => method === 'screensaverEligible')
           ),
           false
+        );
+        // Drop actual heartbeats without touching Home's own timers.
+        await page.evaluate(() => {
+          window.addEventListener(
+            'message',
+            (e) => {
+              if (e.data === 'cytv-screensaver-alive')
+                e.stopImmediatePropagation();
+            },
+            true
+          );
+        });
+        await page.clock.runFor(4500);
+        assert.equal(
+          await page.evaluate(() => window.lgRequests),
+          null,
+          'a frozen inline renderer yields to LG even while the iframe remains mounted'
         );
         await page.evaluate(() =>
           document.dispatchEvent(new Event('webOSRelaunch'))

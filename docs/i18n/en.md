@@ -123,6 +123,8 @@ For your own No-root TV after a factory reset, choose **Reconnect after factory 
 
 If setup is unfinished on desktop, choose **Review recovery options** on the result screen and **Continue** at **Check recovery options?**. The wizard uses the same saved TV connection. For No-root, use **Check TV status** first if the package result is unknown and that button is offered. Confirm the offered change separately. If setup stays blocked, keep the saved connection and recovery data.
 
+In the CLI, starting without a subcommand means installation. If it redirects an unfinished installation to Recovery, it shows a separate `cytv uninstall` command. To remove CYTV, exit recovery and run that command using the same executable, saved TV connection and any custom `--data-dir` option. Confirm removal separately; it also removes installed No-root Home/Helper and saved preferences.
+
 If No-root offers **Retry storage check**, choose it to repeat the read-only check on the same TV. Confirm installation separately after the check passes. If the installer finds an unfinished operation, use **Review recovery options**.
 
 If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen. No-root shows your recorded result. Use **Save diagnostic report** to keep a copy.
@@ -212,11 +214,17 @@ Open Settings → Wallpapers → Upload from phone and scan the code. Choose a J
 
 ## Set up your Clean Your TV
 
-Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer preselects the LG advertising, recommendation, privacy and notification settings. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer preselects the advertising, recommendation, tracking and notification settings. The log upload settings start unchecked. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+
+If the TV rejects a setting, follow the [privacy steps for your LG generation](../PRIVACY.md). You can also [filter DNS without root](../PRIVACY-DNS.md) or [check which services CYTV contacts](../CYTV-NETWORK.md).
 
 Both editions can turn off LG promotional streams when the TV exposes the setting.
 
+In the Privacy group, you can select debug log uploads and fault log uploads to LG separately. Each is skipped if its original value cannot be read. No-root firmware may reject a change. Some TVs enable debug uploads again at startup, so check the setting after restarting.
+
 To undo one change while keeping CYTV installed, open Debloat in Maintenance with the same saved TV connection. Select a saved setting, review its original value and confirm. To stop LG Channels starting automatically on supported TVs, open All Settings → General → Channels → Auto Start LG Channels and choose Off.
+
+In the Root edition, open Maintenance → Debloat → Ad and tracking domain blocking. Choose On to block selected advertising and tracking hostnames on this TV, or Off to restore the original hosts file. Other apps may still show ads. Check this setting again after a Root update.
 
 During removal, you can choose to restore the saved original Debloat settings. If you skip restoration, removal continues with those settings as they are.
 

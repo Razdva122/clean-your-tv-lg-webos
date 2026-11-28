@@ -109,6 +109,14 @@ assert.equal(rejected['no-root-pairing'], 'fail');
 assert.equal(rejected['no-root-install'], 'pending');
 assert.equal(rejected['activate-home'], 'pending');
 assert.equal(rejected['install-root'], undefined);
+const unavailable = observe(inspected, {
+  ...noRoot,
+  stage: 'complete',
+  state: 'recovery_required',
+  code: 'current-state-unverified'
+});
+assert.equal(unavailable['install-readback'], 'unknown');
+assert.equal(unavailable['activate-home'], 'unknown');
 const updater = observe(inspected, {
   ...noRoot,
   stage: 'updates',

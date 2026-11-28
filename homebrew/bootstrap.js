@@ -126,7 +126,7 @@ function parse(args) {
     debloatAction(action) &&
     action !== 'debloat-status' &&
     (typeof request.settings !== 'string' ||
-      !/^[a-zA-Z][a-zA-Z0-9]{0,31}(,[a-zA-Z][a-zA-Z0-9]{0,31}){0,10}$/.test(
+      !/^[a-zA-Z][a-zA-Z0-9]{0,31}(,[a-zA-Z][a-zA-Z0-9]{0,31}){0,12}$/.test(
         request.settings
       ))
   )
@@ -237,6 +237,31 @@ function withNoRootStage(deps, state, action, request) {
       );
   });
 }
+function verifiedClean(result) {
+  var installation = result.installation;
+  return (
+    result.state === 'fresh' &&
+    result.active_operation === null &&
+    installation &&
+    installation.can_install === true &&
+    installation.reason === 'verified_clean_removal' &&
+    installation.clean_removal_verified === true &&
+    installation.can_maintain === false
+  );
+}
+function supersedesCompletedSetup(result, alternative) {
+  return (
+    alternative.state === 'recovery_required' &&
+    alternative.stage === 'complete' &&
+    alternative.code === 'current-state-unverified' &&
+    /^[a-f0-9]{32}$/.test(alternative.operation || '') &&
+    (verifiedClean(result) ||
+      (result.state === 'installed' &&
+        result.installation &&
+        result.installation.can_maintain === true &&
+        result.installation.tile_protocol === 1))
+  );
+}
 function inspectEdition(result, stage, state, deps, evidence) {
   var installation = result.installation,
     fresh = result.state === 'fresh' && !result.active_operation,
@@ -247,13 +272,12 @@ function inspectEdition(result, stage, state, deps, evidence) {
       result.active_operation === null &&
       ((installation.reason === 'no_installation' &&
         installation.clean_removal_verified === undefined) ||
-        (installation.reason === 'verified_clean_removal' &&
-          installation.clean_removal_verified === true &&
-          installation.can_maintain === false)),
+        verifiedClean(result)),
     fallback = fresh
       ? { state: 'edition_unconfirmed', code: 'home_interfaces_unconfirmed' }
       : result;
-  if (typeof stage.editionInspector !== 'string') return fallback;
+  if (typeof stage.editionInspector !== 'string')
+    return Promise.resolve(fallback);
   if (eligible) evidence.checks['home-compatibility'] = 'unknown';
   var command = ['-E', '-s', '-B', stage.editionInspector];
   if (!eligible) command.push('--metadata-only');
@@ -494,14 +518,35 @@ function run(args, deps) {
                 if (stage.noRoot && !result.active_operation) {
                   return noRootAction(deps, state, stage, 'status').then(
                     function (alternative) {
-                      if (alternative.state !== 'unknown') return alternative;
+                      var superseded = supersedesCompletedSetup(
+                        result,
+                        alternative
+                      );
+                      if (alternative.state !== 'unknown' && !superseded)
+                        return alternative;
                       return inspectEdition(
                         result,
                         stage,
                         state,
                         deps,
                         evidence
-                      );
+                      ).then(function (review) {
+                        if (
+                          !superseded ||
+                          review.superseded_no_root_operation ===
+                            alternative.operation
+                        )
+                          return review;
+                        if (
+                          ['fresh', 'installed', 'external_setup'].indexOf(
+                            review.state
+                          ) < 0
+                        )
+                          return alternative;
+                        review.superseded_no_root_operation =
+                          alternative.operation;
+                        return review;
+                      });
                     }
                   );
                 }

@@ -1419,7 +1419,22 @@ class LocalDevice:
             mode = 'capture-stock-proof' if capture_missing_settings else 'stock-proof'
             result=subprocess.run(['/usr/bin/node',str(Path(__file__).parent/'cleanup_tail.js'),
                 mode,record['operation'],'-','-1','-1','-1','-',record['removal']],
-                check=True,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
+                stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
+            try:
+                result.check_returncode()
+            except subprocess.CalledProcessError as error:
+                if result.returncode == 1 and len(result.stdout) <= 4096:
+                    from installation import home_conflict_details
+                    try:
+                        reply = json.loads(result.stdout)
+                    except (ValueError, RecursionError):
+                        reply = None
+                    if (isinstance(reply, dict) and reply.get('cleanup_error') == 'route-changed'
+                            and reply.get('operation') == record['operation'] and reply.get('removal') == record['removal']):
+                        detail = home_conflict_details(reply.get('home_conflict_paths'))
+                        if detail:
+                            error.home_conflict_paths = detail['home_conflict_paths']
+                raise
             return json.loads(result.stdout)['routes']
         option = ',retire_orphan=True' if retire_orphan else ''
         program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'

@@ -791,6 +791,18 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                                                 checks=checks.results)
                 return 0
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
+            if (write.frontend == 'console' and not args.non_interactive
+                    and (args.command == 'install' or saved_review)
+                    and (store.pending(profile) or {}).get('action') == 'install'):
+                write('An unfinished installation is being reviewed in Recovery. To request removal instead, exit recovery and run:')
+                command = 'cytv uninstall --edition ' + profile['edition']
+                if profile.get('root_variant') == 'node012-beta':
+                    command += ' --root-variant node012-beta'
+                if profile.get('connection') == 'root-ssh':
+                    command += ' --connection root-ssh'
+                write.raw(command)
+                write('Use the same executable, saved TV connection and any custom --data-dir option.')
+                write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
             def reconnect_tv():
                 nonlocal remote
                 if remote is not None:

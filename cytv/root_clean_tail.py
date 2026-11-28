@@ -61,7 +61,8 @@ def resume(installer, pending):
              'finish',operation,','.join(stages),'3','4','5',digest,removal]
     # Native gate opens only the existing Root ownership inode; a fresh UUID
     # identifies this disposable support directory, never an operation lease.
-    try:reply=json.loads(installer.remote.run(shlex.join(command),data=source,timeout=180))
+    try:reply=json.loads(installer.remote.run(shlex.join(command),data=source,timeout=180,
+                                                  cleanup_tail=(operation, removal)))
     except TVCommandError:
         if pending.get('stage')=='verified-clean':return None
         raise

@@ -427,7 +427,7 @@ class SSH:
         finally:
             channel.close()
 
-    def run(self, command, data=None, timeout=30):
+    def run(self, command, data=None, timeout=30, *, cleanup_tail=None):
         channel = self._command_channel(command, data)
         try:
             output=[]
@@ -439,6 +439,13 @@ class SSH:
                     try:
                         from .errors import root_driver_details, root_restore_failure_details, root_beta_repair_details
                         reply=json.loads(b''.join(output))
+                        if (cleanup_tail is not None and error.exit_status == 1 and isinstance(reply, dict)
+                                and (reply.get('operation'), reply.get('removal')) == cleanup_tail
+                                and reply.get('cleanup_error') == 'route-changed'):
+                            from .errors import home_conflict_details
+                            paths = home_conflict_details(reply.get('home_conflict_paths'))
+                            if paths:
+                                error.home_conflict_paths = paths['home_conflict_paths']
                         if isinstance(reply,dict) and reply.get('returnValue') is False:
                             retry = reply.get('retained_retry_attempt')
                             if (set(reply) == {'returnValue', 'retained_retry_attempt'} and type(retry) is list

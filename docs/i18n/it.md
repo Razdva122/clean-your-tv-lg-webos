@@ -214,9 +214,15 @@ Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Sceg
 
 Prima di scegliere un tema, usa **Debloat** per selezionare le impostazioni LG di pubblicità, consigli, privacy e notifiche da modificare. Controlla ogni risultato. Se il programma di installazione non può leggere il valore originale, non può salvarlo per un ripristino automatico. Scegli **Salta Debloat** per mantenere le impostazioni attuali.
 
+Se il televisore rifiuta una modifica, segui le [istruzioni sulla privacy per il tuo modello con il telecomando (in inglese)](../PRIVACY.md).
+
 Entrambe le edizioni possono disattivare le trasmissioni promozionali LG se il televisore offre questa impostazione.
 
+In Privacy puoi disattivare separatamente l’invio a LG dei log di debug e dei log degli errori. Se il valore originale è illeggibile, l’impostazione viene saltata. In modalità No-root il firmware può rifiutare la modifica. Alcuni televisori riattivano l’invio dei log di debug all’avvio. Controlla l’impostazione dopo il riavvio.
+
 Per annullare una singola modifica, apri Debloat in Manutenzione con la stessa connessione salvata del televisore. Seleziona l’impostazione, verifica il valore originale e conferma. Sui televisori compatibili puoi disattivare l’avvio automatico di LG Channels in Tutte le impostazioni → Generale → Canali → Avvio automatico LG Channels.
+
+Nell’edizione Root, apri Manutenzione → Debloat → Blocco dei domini pubblicitari e di tracciamento. Attiva l’opzione per bloccare alcuni domini su questo televisore. Disattivala per ripristinare il file hosts originale. Alcune app possono continuare a mostrare pubblicità. Ricontrolla l’opzione dopo un aggiornamento di Root.
 
 Durante la disinstallazione puoi ripristinare le impostazioni originali salvate da Debloat. Se salti il ripristino, la disinstallazione prosegue senza modificare queste impostazioni.
 

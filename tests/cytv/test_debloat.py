@@ -16,6 +16,128 @@ class DebloatTests(unittest.TestCase):
         self.installer = SimpleNamespace(profile=profile, store=Store(self.tmp.name))
         self.record = self.installer.store.device_dir(profile) / 'debloat.json'
 
+    def test_log_uploads_journal_native_values_before_write_and_restore(self):
+        from cytv.terminal import Console
+
+        values = {'dbgLogUpload': True, 'faultLogUpload': False}
+        def luna(uri, payload, **kwargs):
+            self.assertEqual(payload['category'], 'option')
+            if uri.endswith('/getSystemSettings'):
+                key, = payload['keys']
+                return {'returnValue': True, 'settings': {key: values[key]}}
+            (key, value), = payload['settings'].items()
+            self.assertEqual(key, 'dbgLogUpload')
+            self.assertIs(type(value), bool)
+            entry = json.loads(self.record.read_text())['settings'][key]
+            self.assertIs(entry['original'], True)
+            self.assertIs(entry['target'], False)
+            values[key] = value
+            return {'returnValue': True}
+
+        self.installer.remote = Mock(root=True)
+        self.installer.remote.luna.side_effect = luna
+        self.assertEqual(debloat.apply(self.installer, list(values)),
+                         {'dbgLogUpload': 'verified', 'faultLogUpload': 'already'})
+        self.assertIs(values['dbgLogUpload'], False)
+        events, output = {}, []
+        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile,
+                              lambda _: 'y', Console(output.append), diagnostic=events)
+        self.assertEqual(events, {'dbgLogUpload': 'restored'})
+        self.assertIn('Debug log uploads to LG — Off → On', ' '.join(output))
+        self.assertIs(values['dbgLogUpload'], True)
+        self.assertEqual(json.loads(self.record.read_text())['settings'], {})
+
+    def test_root_requires_exact_log_upload_type_and_valid_record(self):
+        self.installer.remote = Mock(root=True)
+        for value in (None, 0, 1, 'on', 'off', 'true', 'false'):
+            with self.subTest(value=value):
+                self.installer.remote.luna.reset_mock()
+                self.installer.remote.luna.return_value = {'returnValue': True, 'settings': {'faultLogUpload': value}}
+                self.assertEqual(debloat.apply(self.installer, ['faultLogUpload']), {'faultLogUpload': 'unavailable'})
+                self.assertEqual(self.installer.remote.luna.call_count, 1)
+                self.assertFalse(self.record.exists())
+        self.record.write_text(json.dumps({'schema': 1, 'settings': {'faultLogUpload': {'original': 1, 'target': 0}}}))
+        self.installer.remote.luna.return_value = {'returnValue': True, 'settings': {'faultLogUpload': True}}
+        events = {}
+        self.assertEqual(debloat.apply(self.installer, ['faultLogUpload'], diagnostic=events),
+                         {'faultLogUpload': 'failed'})
+        self.assertEqual(events, {'faultLogUpload': 'journal-failed'})
+
+    def test_no_root_log_uploads_use_only_paired_setter_and_verify_native_readback(self):
+        self.installer.profile.update(edition='no-root', port=9922)
+        self.installer.remote = Mock(root=False)
+        key = 'dbgLogUpload'
+        for file_initial, paired_original, accepted, actual, expected in (
+            (None, True, True, False, 'verified'),
+            (False, True, True, False, 'verified'),  # stale preference file with target already present
+            (True, True, True, False, 'verified'),  # stale preference file after successful set
+            (None, True, False, None, 'write-rejected'),
+            (None, True, True, True, 'verify-mismatch'),
+            (None, True, True, 0, 'verify-unavailable'),
+            (False, True, True, None, 'verify-unavailable'),  # stale file is insufficient
+            ('off', 'on', None, None, 'unavailable'),
+            (None, False, None, None, 'already'),
+        ):
+            with self.subTest(expected=expected), patch.object(debloat, 'SSAP') as pair, patch.object(debloat.time, 'sleep'):
+                self.installer.remote.run.return_value = json.dumps(file_initial)
+                values = {'read': paired_original}
+                def call(uri, payload, **kwargs):
+                    if uri.endswith('/getSystemSettings'):
+                        self.assertEqual(payload, {'category': 'option', 'keys': [key]})
+                        return {'returnValue': True, 'settings': {key: values['read']}}
+                    self.assertEqual(uri, 'ssap://settings/setSystemSettings')
+                    self.assertIsNotNone(accepted, 'unexpected write')
+                    self.assertEqual(payload['category'], 'option')
+                    self.assertIs(payload['settings'][key], False)
+                    values['read'] = actual
+                    return {'returnValue': accepted}
+                pair.return_value.__enter__.return_value.call.side_effect = call
+                events = {}
+                debloat.apply(self.installer, [key], diagnostic=events)
+                self.assertEqual(events, {key: expected})
+                self.installer.remote.luna.assert_not_called()
+
+    def test_no_root_restores_upload_with_paired_read_when_file_is_missing(self):
+        from cytv.terminal import Console
+
+        self.installer.profile.update(edition='no-root', port=9922)
+        record = self.installer.store.device_dir(self.installer.profile) / 'debloat.json'
+        record.write_text(json.dumps({'schema': 1, 'settings': {'faultLogUpload': {'original': True, 'target': False}}}))
+        self.installer.remote = Mock(root=False)
+        self.installer.remote.run.return_value = 'null'
+        with patch.object(debloat, 'SSAP') as pair:
+            ssap = pair.return_value.__enter__.return_value
+            ssap.call.side_effect = [
+                {'returnValue': True, 'settings': {'faultLogUpload': value}} for value in (False, False)
+            ] + [{'returnValue': True}, {'returnValue': True, 'settings': {'faultLogUpload': True}}]
+            events = {}
+            debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile,
+                                  lambda _: 'y', Console(lambda _: None), diagnostic=events)
+            self.assertEqual(events, {'faultLogUpload': 'restored'})
+            self.assertEqual(ssap.call.call_args_list[2].args[0], 'ssap://settings/setSystemSettings')
+            self.assertIs(ssap.call.call_args_list[2].args[1]['settings']['faultLogUpload'], True)
+        self.assertEqual(json.loads(record.read_text())['settings'], {})
+
+    def test_restore_retains_paired_receipt_if_readback_becomes_inaccessible(self):
+        from cytv.terminal import Console
+
+        self.installer.profile.update(edition='no-root', port=9922)
+        record = self.installer.store.device_dir(self.installer.profile) / 'debloat.json'
+        entry = {'original': True, 'target': False}
+        record.write_text(json.dumps({'schema': 1, 'settings': {'faultLogUpload': entry}}))
+        self.installer.remote = Mock(root=False)
+        self.installer.remote.run.return_value = 'true'  # stale original in the file
+        with patch.object(debloat, 'SSAP') as pair:
+            ssap = pair.return_value.__enter__.return_value
+            ssap.call.side_effect = [{'returnValue': True, 'settings': {'faultLogUpload': False}},
+                                     {'returnValue': False}]
+            events = {}
+            debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile,
+                                  lambda _: 'y', Console(lambda _: None), diagnostic=events)
+            self.assertEqual(events, {'faultLogUpload': 'restore-unavailable'})
+            self.assertEqual(ssap.call.call_count, 2)
+        self.assertEqual(json.loads(record.read_text())['settings'], {'faultLogUpload': entry})
+
     def test_promotion_streamer_requires_a_readable_original_before_ssap_write(self):
         self.installer.profile.update(edition='no-root', port=9922)
         self.installer.remote = Mock(root=False)
@@ -63,6 +185,41 @@ class DebloatTests(unittest.TestCase):
                 writer.assert_any_call('debloat-results', {'homePromotion': expected, 'livePlus': 'already'})
                 self.assertEqual(events['homePromotion'],
                                  'write-unavailable' if isinstance(reply, Exception) else 'write-rejected')
+
+    def test_manual_steps_are_limited_to_rejected_writes_and_the_selected_setting(self):
+        sections = {
+            'home-promotions': ('homePromotion', 'contentRecommendation'),
+            'screensaver': ('screenSaverAd',), 'viewing': ('livePlus',),
+            'advertising': ('adCookie', 'lmt'), 'tips': ('aiNudge',), 'sports': ('sportsAlarm',),
+            'live-promotions': ('livePromotion', 'promotionStreamer', 'webOSPromotionVideo'),
+            'log-uploads': ('dbgLogUpload', 'faultLogUpload'),
+        }
+        self.assertTrue(set(debloat.SETTINGS).issubset({key for group in sections.values() for key in group}))
+        for lang, filename in (('ru', 'PRIVACY.ru.md'), ('en', 'PRIVACY.md'), ('de', 'PRIVACY.md')):
+            with patch.object(debloat, 'resolved_language', return_value=lang):
+                for section, keys in sections.items():
+                    for key in keys:
+                        for status in ('firmware-blocked', 'write-rejected', 'restore-rejected'):
+                            with self.subTest(lang=lang, key=key, status=status):
+                                self.assertTrue(debloat.privacy_guide(key, status).endswith('/' + filename + '#' + section))
+        for status in (*debloat.DIAGNOSTIC_RESULTS, 'failed', 'unverified'):
+            if status not in ('write-rejected', 'restore-rejected'):
+                self.assertIsNone(debloat.privacy_guide('livePlus', status))
+        self.assertIsNone(debloat.privacy_guide('unknown', 'write-rejected'))
+
+    def test_terminal_links_only_the_setting_rejected_by_root(self):
+        from cytv.terminal import Console
+
+        self.installer.remote = Mock(root=True)
+        self.installer.remote.luna.side_effect = [
+            {'returnValue': True, 'settings': {'homePromotion': 'on'}}, {'returnValue': False},
+            {'returnValue': True, 'settings': {'contentRecommendation': 'on'}}, TimeoutError(),
+        ]
+        output = []
+        answers = iter(['y', '1', '0', '0', '0', 'y', '1'])
+        debloat.run(self.installer, lambda _: next(answers), Console(output.append))
+        self.assertEqual([line for line in output if line.startswith('https://')],
+                         [debloat.privacy_guide('homePromotion', 'write-rejected')])
 
     def test_result_states_and_journal_precedes_write(self):
         values = {'homePromotion': 'off', 'screenSaverAd': 'on', 'lmt': 'off'}
@@ -191,7 +348,8 @@ class DebloatTests(unittest.TestCase):
         self.installer.remote = Mock(root=True)
         for decision, replies, expected, keep in (
             ('n', ['off'], None, True),
-            ('y', ['off', 'off', False], 'restore-failed', True),
+            ('y', ['off', 'off', False], 'restore-rejected', True),
+            ('y', ['off', 'off', TimeoutError()], 'restore-failed', True),
             ('y', ['off', 'off', True, 'on'], 'restored', False),
             (None, ['on'], 'restore-already', False),
         ):
@@ -205,11 +363,15 @@ class DebloatTests(unittest.TestCase):
                         self.assertEqual(payload, {'category': 'general', 'keys': ['sportsAlarm']})
                         return {'returnValue': True, 'settings': {'sportsAlarm': value}}
                     self.assertEqual(payload, {'category': 'general', 'settings': {'sportsAlarm': 'on'}})
+                    if isinstance(value, Exception):
+                        raise value
                     return {'returnValue': value}
                 self.installer.remote.luna.side_effect = luna
                 log, events = [], {}
                 debloat.run(self.installer, lambda _: next(answers), Console(log.append),
                             maintenance=True, diagnostic=events)
+                self.assertEqual([line for line in log if line.startswith('https://')],
+                                 [debloat.privacy_guide('sportsAlarm', expected)] if expected == 'restore-rejected' else [])
                 self.assertEqual(list(values), [])
                 self.assertEqual(events, {'sportsAlarm': expected} if expected else {})
                 saved = json.loads(self.record.read_text())['settings']
@@ -267,6 +429,31 @@ class DebloatTests(unittest.TestCase):
                          {key: entries[key] for key in ('livePlus', 'sportsAlarm')})
         self.assertIn('Restored and verified', ' '.join(output))
         self.assertIn('Could not read the current value', ' '.join(output))
+
+    def test_root_domain_blocking_reads_before_and_after_one_explicit_write(self):
+        from cytv.desktop import DesktopConsole
+        write = DesktopConsole(lambda *args: None)
+        self.installer.remote = Mock(root=True)
+        def reply(state):
+            return {'returnValue':True, 'root':True, 'result':{'returnValue':True, 'result':state}}
+        self.installer.remote.luna.side_effect = [reply('off'), reply('on'), reply('on')]
+        self.assertTrue(debloat.offer_domain_blocking(self.installer, lambda label:'1', write))
+        calls = self.installer.remote.luna.call_args_list
+        self.assertEqual([call.args[1] for call in calls],
+                         [{'domainBlocking':'status'}, {'domainBlocking':'on'}, {'domainBlocking':'status'}])
+
+    def test_domain_blocking_does_not_write_on_skip_or_other_edition(self):
+        from cytv.desktop import DesktopConsole
+        write = DesktopConsole(lambda *args: None)
+        self.installer.remote = Mock(root=True)
+        self.installer.remote.luna.return_value = {
+            'returnValue': True, 'root': True, 'result': {'returnValue': True, 'result': 'off'}}
+        self.assertFalse(debloat.offer_domain_blocking(self.installer, lambda label:'', write))
+        self.installer.remote.luna.assert_called_once()
+        self.installer.remote.luna.reset_mock()
+        self.installer.profile['edition'] = 'no-root'
+        self.assertFalse(debloat.offer_domain_blocking(self.installer, self.fail, write))
+        self.installer.remote.luna.assert_not_called()
 
     def test_restore_uses_ssap_for_saved_developer_mode_profile(self):
         self.installer.profile.update(edition='no-root', port=9922)

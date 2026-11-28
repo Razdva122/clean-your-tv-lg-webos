@@ -108,6 +108,30 @@ let browser;
       .then((t) => t.includes('SECRET-TEST')),
     false
   );
+  const guideUrl =
+    'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/PRIVACY.ru.md#advertising';
+  await page.evaluate((url) => {
+    receiveNative({ kind: 'log', text: url });
+    receiveNative({
+      kind: 'question',
+      id: 'test-debloat',
+      context: 'LG\n' + url + '\nhttps://example.invalid/other',
+      text: 'Continue?',
+      options: [{ value: '1', label: 'OK' }]
+    });
+  }, guideUrl);
+  const link = page.locator('dialog a');
+  assert.equal(await link.count(), 1);
+  assert.equal(await link.getAttribute('href'), guideUrl);
+  assert.equal(
+    await link.innerText(),
+    'Открыть руководство по конфиденциальности'
+  );
+  assert.equal(
+    await page.locator('#log-text a').getAttribute('href'),
+    guideUrl
+  );
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
   await page.evaluate(() => {
     receiveNative({
       kind: 'error',

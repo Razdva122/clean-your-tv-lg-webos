@@ -422,6 +422,10 @@ def _remove_root(run, proof):
     if proof and any(os.path.lexists(STATE/name) for name in (
             'ls2-provision-snapshot.json','recovery-provision.pending.json','recovery-provision.json')):
         raise ValueError('Conflicting provisioning evidence; retain state for recovery')
+    if os.path.lexists(STATE/'domain-blocking.hosts'):
+        runtime('retire-domain-blocking', run)
+        if os.path.lexists(STATE/'domain-blocking.hosts'):
+            raise ValueError('Domain blocking cleanup is incomplete')
     write_stage('uninstall-restored', **proof)
     # No overrides were installed on the pre-provision path. Package removal
     # handles its original registrations; neither rollback nor a scan is needed.
@@ -523,6 +527,9 @@ def install_failure(error, *, attempt=None):
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:result['errno']=error.errno
     if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
         result['exit_status']=error.returncode
+    if hasattr(error, 'home_conflict_paths'):
+        from installation import home_conflict_details
+        result.update(home_conflict_details(error.home_conflict_paths))
     return result
 
 
@@ -545,6 +552,9 @@ def install_failure_details(value, attempt=None):
     for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
         number=value.get(key)
         if type(number) is int and low<=number<=high:result[key]=number
+    if 'home_conflict_paths' in value:
+        from installation import home_conflict_details
+        result.update(home_conflict_details(value['home_conflict_paths']))
     return result
 
 

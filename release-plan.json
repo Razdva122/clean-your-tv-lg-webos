@@ -1,7 +1,88 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 861,
+      "issues": [
+        410
+      ],
+      "summary": "Show the CLI uninstall command before pending-install recovery"
+    },
+    {
+      "pr": 862,
+      "issues": [
+        101
+      ],
+      "summary": "Record verified Root setup on LG OLED65C2AUA"
+    },
+    {
+      "pr": 865,
+      "issues": [],
+      "summary": "Defer the LG screensaver while the inline CYTV saver is visible"
+    },
+    {
+      "pr": 867,
+      "issues": [
+        741
+      ],
+      "summary": "Record LG C1 and C2 standby Home verification"
+    },
+    {
+      "pr": 869,
+      "issues": [],
+      "summary": "Plan the project TV window at candidate dispatch"
+    },
+    {
+      "pr": 870,
+      "issues": [],
+      "summary": "Verify the signed Engine transition before candidate builds"
+    },
+    {
+      "pr": 871,
+      "issues": [],
+      "summary": "Replay affected Guardian shutdown cases before candidate builds"
+    },
+    {
+      "pr": 872,
+      "issues": [],
+      "summary": "Run Intel macOS installer tests in two isolated workers"
+    },
+    {
+      "pr": 873,
+      "issues": [],
+      "summary": "Add opt-in controls for LG debug and fault log uploads"
+    },
+    {
+      "pr": 874,
+      "issues": [],
+      "summary": "Add optional Root blocking for LG ad and tracking domains"
+    },
+    {
+      "pr": 879,
+      "issues": [],
+      "summary": "Guide LG owners through privacy settings and link refused Debloat changes"
+    },
+    {
+      "pr": 880,
+      "issues": [
+        818
+      ],
+      "summary": "Wait for LG Home on IR presses from Live TV"
+    },
+    {
+      "pr": 881,
+      "issues": [
+        875
+      ],
+      "summary": "Report detected Home conflict paths on Root install and cleanup failures"
+    },
+    {
+      "pr": 882,
+      "issues": [],
+      "summary": "Fix TV Installer recovery after verified desktop removal"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

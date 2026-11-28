@@ -1205,6 +1205,20 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(reply['stage'], 'verified-clean')
         self.assertEqual(foreign.read_text(), 'third-party filter')
 
+    def test_stock_proof_reports_all_present_home_paths_including_broken_link(self):
+        self.compositor_record()
+        paths = ['/media/developer/cleanyourtv', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser']
+        for name in paths:
+            path = self.base / name.lstrip('/')
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to('private-missing-target')
+        result, reply = self.compositor_tail(MODE='stock-proof')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(reply['cleanup_error'], 'route-changed')
+        self.assertEqual(reply.get('home_conflict_paths'), paths)
+        self.assertNotIn('private-missing-target', result.stdout)
+        self.assertEqual(json.loads((self.base / 'mutations.json').read_text()), [])
+
     def test_stock_compositor_read_only_recheck_refuses_new_foreign_home_state(self):
         self.compositor_record()
         result,reply=self.compositor_tail(MODE='stock-proof')

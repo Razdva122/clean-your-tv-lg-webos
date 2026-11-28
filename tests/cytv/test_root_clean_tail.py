@@ -120,6 +120,32 @@ process.stdout.write(JSON.stringify({
         self.installer.remote.run.side_effect=run
         self.assertIsNone(resume(self.installer,self.pending))
 
+    def test_cleanup_guard_paths_reach_export_and_first_failure(self):
+        from unittest.mock import patch
+        from cytv import diagnostics, state
+        from cytv.errors import HOME_CONFLICT_PATHS
+        from cytv.operations import Installer
+        paths = list(HOME_CONFLICT_PATHS)
+        for reason, fields in [
+                ('route-changed', {'home_conflict_paths': paths}),
+                ('cleanup-check-failed', {'last_failure': {'home_conflict_paths': paths}}),
+                ('cleanup-check-failed', {'last_failure': {'cleanup_probe': {
+                    'exception_type': 'ValueError', 'home_conflict_paths': paths}}})]:
+            with self.subTest(fields=fields), tempfile.TemporaryDirectory() as directory:
+                store = state.Store(directory)
+                profile = state.target('test-tv', 'root')
+                store.begin(profile, 'install', stage='setup')
+                self.installer.profile, self.installer.store = profile, store
+                self.installer.progress = Mock()
+                reply = dict(stage='private-cleanup', state='recovery_required', cleanup_error=reason, **fields)
+                with patch('cytv.root_clean_tail.resume', return_value=reply), self.assertRaises(UserError) as caught:
+                    Installer._continue_root_clean_removal(self.installer, self.pending)
+                report = diagnostics.create_report(store, 'install', profile, 'remove-existing-root', caught.exception,
+                                                   tv_info={'frontend': 'android'})
+                saved = json.loads(report.read_text())
+                self.assertEqual(saved['home_conflict_paths'], paths)
+                self.assertEqual(saved['first_failure']['home_conflict_paths'], paths)
+
     def test_current_cleanup_failure_takes_precedence_over_old_restart(self):
         from unittest.mock import patch
         from cytv.operations import Installer

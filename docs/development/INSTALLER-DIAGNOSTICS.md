@@ -103,10 +103,18 @@ host-provided attempt nonce. Failed SSH commands still raise their original
 `TVCommandError`; only a complete failure JSON response of at most 4096 bytes is
 considered. The host filters it, requires the current install attempt and drops
 the nonce before report/first-failure/history export. Report projection filters
-all fields again. Raw exception messages, stdout/stderr, commands, full paths,
+all fields again. Raw exception messages, stdout/stderr, commands, arbitrary paths,
 identities and unknown fields are excluded. Unknown, oversized, malformed or
 mismatched responses retain the existing generic failure. No command is replayed,
 no receipt is cleared and no extra TV request or state file is introduced.
+
+When the Home integration check refuses Root installation or cleanup, the saved
+report includes `home_conflict_paths` with every marker observed at that check.
+Its only possible entries are `/media/developer/cleanyourtv`, `/var/lib/luma-home`
+and `/var/lib/webosbrew/homechooser`. An empty directory or dangling symlink also
+counts as present. The check reads neither directory contents nor link targets.
+Support can use **Save diagnostic report** from the failed attempt to identify
+the paths. Reports produced before this field was added cannot identify them.
 
 This covers exceptions caught by the driver entrypoint, including device, Node,
 bundle and native-admission checks. Module imports before the entrypoint,

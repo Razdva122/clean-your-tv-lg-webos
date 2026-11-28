@@ -278,6 +278,19 @@ def root_restore_failure_details(value):
     return result
 
 
+HOME_CONFLICT_PATHS = ('/media/developer/cleanyourtv', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser')
+
+
+def home_conflict_details(paths):
+    """Export only the three fixed marker names, never their contents or link targets."""
+    known = HOME_CONFLICT_PATHS
+    if not isinstance(paths, list) or not 0 < len(paths) <= len(known):
+        return {}
+    if any(path not in known for path in paths):
+        return {}
+    return {'home_conflict_paths': [path for path in known if path in paths]}
+
+
 def root_driver_details(value, *, keep_attempt=False):
     """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
     if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
@@ -295,6 +308,7 @@ def root_driver_details(value, *, keep_attempt=False):
     for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
         number=value.get(key)
         if type(number) is int and low<=number<=high:result[key]=number
+    result.update(home_conflict_details(value.get('home_conflict_paths')))
     if keep_attempt:
         attempt=value.get('attempt')
         if not isinstance(attempt,str) or not re.fullmatch('[a-f0-9]{32}',attempt):return {}

@@ -327,6 +327,29 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(self.owner.status(),lease)
         self.assertEqual(self.owner.store.read('clean-removal-'+self.id),record)
 
+    def test_completed_removal_reports_new_home_conflicts_without_rewriting_fence(self):
+        import install_device, install_driver, io, json
+        from contextlib import redirect_stdout
+        self.original()
+        self.driver.clean_remove(self.id)
+        receipt = self.owner.store.read('clean-removal-' + self.id)
+        conflict = ValueError('PRIVATE')
+        conflict.home_conflict_paths = ['/media/developer/cleanyourtv', '/var/lib/luma-home']
+        for action, options in [('clean-remove', ['--payload', '/tmp/fixture']), ('clean-status', ['--verify-current'])]:
+            output = io.StringIO()
+            with self.subTest(action=action), patch.object(install_device, 'LocalDevice', return_value=self.device), \
+                    patch('installation.Store', return_value=self.owner.store), \
+                    patch.object(install_device, 'checked_store', return_value=self.owner.store), \
+                    patch.object(self.device, 'verify_clean', side_effect=conflict), \
+                    patch.object(self.device, 'preflight', create=True), patch.object(self.device, 'log', create=True), \
+                    patch.object(sys, 'argv', ['install_driver', action, '--operation', self.id, *options]), redirect_stdout(output):
+                install_driver.main()
+            result = json.loads(output.getvalue())
+            self.assertEqual(result['state'], 'recovery_required')
+            self.assertEqual(result.get('last_failure', {}).get('home_conflict_paths'), conflict.home_conflict_paths)
+            self.assertNotIn('PRIVATE', output.getvalue())
+            self.assertEqual(self.owner.store.read('clean-removal-' + self.id), receipt)
+
     def test_pending_removal_cannot_handoff_to_new_install(self):
         self.device.fail='private-cleanup';self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):self.driver._run('b'*32,'install',lambda checkpoint:self.fail('executed'))
@@ -692,6 +715,24 @@ class ConfinedCleanup(unittest.TestCase):
         self.assertEqual(detail.get('errno'),13)
         self.assertIn({'file':'deploy.py','line':2},detail.get('frames',[]))
         self.assertNotIn('PRIVATE',str(summary))
+
+    def test_stock_proof_failure_exports_only_paths_from_matching_removal(self):
+        import json, subprocess
+        from install_device import LocalDevice
+        from install_driver import failure_summary
+        record = {'operation': 'c' * 32, 'removal': 'a' * 32}
+        paths = ['/media/developer/cleanyourtv', '/var/lib/webosbrew/homechooser']
+        reply = dict(record, cleanup_error='route-changed', state='recovery_required', stage='private-cleanup',
+                     current=False, home_conflict_paths=paths)
+        for changes, expected in [({}, paths), ({'removal': 'd' * 32}, None),
+                                  ({'cleanup_error': 'other'}, None), ({'home_conflict_paths': ['/PRIVATE']}, None)]:
+            with self.subTest(changes=changes):
+                result = subprocess.CompletedProcess(['node'], 1, json.dumps(dict(reply, **changes)).encode(), b'PRIVATE')
+                with patch('subprocess.run', return_value=result), self.assertRaises(subprocess.CalledProcessError) as caught:
+                    LocalDevice().compositor_stock(record)
+                summary = failure_summary(caught.exception)
+                self.assertEqual(summary.get('home_conflict_paths'), expected)
+                self.assertNotIn('PRIVATE', str(summary))
 
     def test_stock_probe_invalid_child_output_cannot_become_route_or_private_diagnostic(self):
         import json, subprocess, deploy
