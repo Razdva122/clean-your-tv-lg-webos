@@ -6,6 +6,7 @@ const test = require('node:test'),
   E = require('events');
 const HOME = 'com.gathin.tvhome',
   LG = 'com.webos.app.home',
+  LIVE_TV = 'com.webos.app.livetv',
   COVER = 'com.webos.app.cpcover';
 function controller({
   automatic = true,
@@ -923,6 +924,40 @@ test('IR Home starts immediately when LG Home arrives during the delay', () => {
   c.fg(HOME);
   c.advance(500);
   assert.equal(c.homeCalls().length, 2, 'cancel the original delay');
+});
+test('IR Home from Live TV waits for the reported late LG foreground', () => {
+  const c = controller();
+  c.fg(LIVE_TV);
+  irPress(c);
+  c.advance(1200);
+  assert.equal(c.homeCalls().length, 1, 'no early CYTV launch in #818');
+  c.fg(COVER);
+  c.advance(1100);
+  assert.equal(c.homeCalls().length, 1, 'the transition cover is not LG Home');
+  c.fg(LG);
+  assert.equal(c.homeCalls().length, 2, 'launch immediately on LG Home');
+  c.homeCalls()[1].reply();
+  c.fg(HOME);
+  c.advance(11000);
+  assert.equal(c.homeCalls().length, 2, 'only one launch for this transition');
+});
+test('IR Home from Live TV falls back when LG Home is never reported', () => {
+  const c = controller();
+  c.fg(LIVE_TV);
+  irPress(c);
+  c.advance(2999);
+  assert.equal(c.homeCalls().length, 1);
+  c.advance(1);
+  assert.equal(c.homeCalls().length, 2);
+});
+test('leaving Live TV cancels a pending IR Home launch', () => {
+  const c = controller();
+  c.fg(LIVE_TV);
+  irPress(c);
+  c.advance(1200);
+  c.fg('com.example.other');
+  c.advance(3000);
+  assert.equal(c.homeCalls().length, 1);
 });
 test('IR Home recovers the reported late LG takeover with bounded retries', () => {
   const c = controller();
