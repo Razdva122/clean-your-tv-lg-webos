@@ -149,6 +149,7 @@ catalog groups the result by the SDK and records the other name in the report.
 - OLED55G59LS — No-root — firmware 43.21.96 — v1.20.5 — [owner reported operation (#529)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529)
 - OLED65C11LB — Root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.29.1 — [Home routing verified after one standby/wake cycle (#741)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/741#issuecomment-7225725297)
 - OLED65C27LA — Root — firmware 23.20.74 — webOS 9.2.1-2617 — v1.29.1 — [Home routing verified after three standby/wake cycles (#741)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/741#issuecomment-7218117520)
+- OLED65C2AUA — Root (experimental) — firmware 04.40.90 — webOS 22; SDK 7.4.0 — verified removal, fresh setup and physical Home button; behavior after restart is awaiting confirmation. [Owner report #101](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/101#issuecomment-7211265242)
 - OLED65C2PUA — No-root — firmware 43.21.94 — [owner reported operation (#646)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/646)
 - OLED65C3LA — No-root — [owner reported operation (#279)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/279)
 - OLED65C57LA — No-root — firmware 43.21.77 — webOS SDK 11.2.0 — [partial result (#96)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/96)
