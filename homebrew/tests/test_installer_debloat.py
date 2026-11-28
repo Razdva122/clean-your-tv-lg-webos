@@ -87,6 +87,30 @@ class HomebrewDebloatTests(unittest.TestCase):
         self.assertEqual(restored['results'], {'lmt': 'restore-rejected'})
         self.assertEqual(restored['settings']['lmt'], {'value': 'on', 'saved': True, 'guide': 'advertising'})
 
+    def test_log_uploads_keep_native_booleans_for_status_apply_and_restore(self):
+        self.values.update(dbgLogUpload=False, faultLogUpload=True)
+        status = self.run_action('debloat-status')['settings']
+        self.assertIs(status['dbgLogUpload']['value'], False)
+        self.assertIs(status['faultLogUpload']['value'], True)
+        applied = self.run_action('debloat', 'dbgLogUpload', 'faultLogUpload')
+        self.assertEqual(applied['results'], {'dbgLogUpload': 'already', 'faultLogUpload': 'verified'})
+        self.assertEqual(len(self.writes), 1)
+        self.assertIs(self.writes[0][1], False)
+        record = self.owner.store.read('homebrew-debloat')['settings']['faultLogUpload']
+        self.assertIs(record['original'], True)
+        self.assertIs(record['target'], False)
+        self.assertEqual(self.run_action('debloat-restore', 'faultLogUpload')['results'], {'faultLogUpload': 'restored'})
+        self.assertIs(self.writes[-1][1], True)
+        self.assertEqual(self.owner.store.read('homebrew-debloat')['settings'], {})
+
+    def test_invalid_types_cannot_trigger_a_write_or_restore(self):
+        self.values.update(dbgLogUpload='on', faultLogUpload=1, lmt=True)
+        self.assertEqual(self.run_action('debloat', 'dbgLogUpload', 'faultLogUpload', 'lmt')['results'],
+                         dict.fromkeys(('dbgLogUpload', 'faultLogUpload', 'lmt'), 'unavailable'))
+        self.owner.store.write('homebrew-debloat', {'schema': 1, 'settings': {'dbgLogUpload': {'target': 0, 'original': 1}}})
+        self.assertEqual(self.run_action('debloat-restore', 'dbgLogUpload')['code'], 'journal_failed')
+        self.assertEqual(self.writes, [])
+
     def test_busy_or_incomplete_product_cannot_change_settings(self):
         with self.owner._lock(create=False):
             self.assertEqual(self.run_action('debloat', 'lmt')['code'], 'busy')

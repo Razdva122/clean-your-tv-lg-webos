@@ -216,6 +216,8 @@ Si el televisor rechaza un cambio, consulta la [guía de privacidad para tu mode
 
 Ambas ediciones pueden desactivar las transmisiones promocionales de LG si el televisor ofrece el ajuste.
 
+En Privacidad puedes desactivar por separado el envío a LG de registros de depuración y de fallos. Si no se puede leer su valor original, se omite ese ajuste. En No-root, el firmware puede rechazar el cambio. Algunos televisores vuelven a activar el envío de registros de depuración al arrancar. Comprueba el ajuste después de reiniciar.
+
 Para deshacer un solo cambio, abre Debloat en Mantenimiento con la misma conexión guardada del televisor. Elige el ajuste, revisa el valor original y confirma. En televisores compatibles, puedes desactivar el inicio automático de LG Channels en Todos los ajustes → General → Canales → Inicio automático de LG Channels.
 
 Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.

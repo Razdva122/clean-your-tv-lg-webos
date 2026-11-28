@@ -126,6 +126,8 @@ If the TV rejects a change, follow the [LG privacy guide for your model](PRIVACY
 
 Both editions can turn off LG promotional streams when the TV exposes the setting.
 
+In the Privacy group, you can select debug log uploads and fault log uploads to LG separately. Each is skipped if its original value cannot be read. No-root firmware may reject a change. Some TVs enable debug uploads again at startup, so check the setting after restarting.
+
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 
 No-root with Developer Mode offers optional auto-renewal; keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.

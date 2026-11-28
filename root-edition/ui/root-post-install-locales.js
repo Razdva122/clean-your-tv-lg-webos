@@ -16,8 +16,8 @@ if (window.HomeI18n)
       'Theme applied': 'Тема применена',
       'The theme could not be applied. Select it again.':
         'Не удалось применить тему. Выберите её снова.',
-      'Select which LG ads and recommendations to change.':
-        'Отметьте, какие настройки рекламы и рекомендаций LG хотите изменить.',
+      'Select the LG settings you want to change.':
+        'Выберите настройки LG, которые хотите изменить.',
       'Checking LG settings…': 'Проверяем настройки LG…',
       'Apply selected settings': 'Применить выбранные настройки',
       'Restore selected settings': 'Восстановить выбранные настройки',
@@ -35,6 +35,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Отключить Live Plus',
       'Turn off advertising cookies': 'Отключить рекламные файлы cookie',
       'Limit ad tracking': 'Ограничить отслеживание рекламы',
+      'Turn off debug log uploads to LG':
+        'Отключить отправку отладочных журналов в LG',
+      'Turn off fault log uploads to LG':
+        'Отключить отправку журналов сбоев в LG',
       'Turn off Smart Tips': 'Отключить умные подсказки',
       'Turn off sports notifications': 'Отключить спортивные уведомления',
       'Already in the requested state': 'Уже установлено нужное значение',
@@ -72,8 +76,8 @@ if (window.HomeI18n)
       'Theme applied': 'Design angewendet',
       'The theme could not be applied. Select it again.':
         'Das Design konnte nicht angewendet werden. Wähle es erneut.',
-      'Select which LG ads and recommendations to change.':
-        'Wähle die LG-Werbe- und Empfehlungseinstellungen aus, die du ändern möchtest.',
+      'Select the LG settings you want to change.':
+        'Wähle die LG-Einstellungen, die du ändern möchtest.',
       'Checking LG settings…': 'LG-Einstellungen werden geprüft…',
       'Apply selected settings': 'Ausgewählte Einstellungen anwenden',
       'Restore selected settings': 'Ausgewählte Einstellungen wiederherstellen',
@@ -91,6 +95,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Live Plus ausschalten',
       'Turn off advertising cookies': 'Werbe-Cookies ausschalten',
       'Limit ad tracking': 'Werbe-Tracking begrenzen',
+      'Turn off debug log uploads to LG':
+        'Versand von Debug-Protokollen an LG ausschalten',
+      'Turn off fault log uploads to LG':
+        'Versand von Fehlerprotokollen an LG ausschalten',
       'Turn off Smart Tips': 'Intelligente Tipps ausschalten',
       'Turn off sports notifications': 'Sportbenachrichtigungen ausschalten',
       'Already in the requested state':
@@ -130,8 +138,8 @@ if (window.HomeI18n)
       'Theme applied': 'Tema aplicado',
       'The theme could not be applied. Select it again.':
         'No se pudo aplicar el tema. Vuelve a seleccionarlo.',
-      'Select which LG ads and recommendations to change.':
-        'Elige qué ajustes de anuncios y recomendaciones de LG quieres cambiar.',
+      'Select the LG settings you want to change.':
+        'Selecciona los ajustes de LG que quieras cambiar.',
       'Checking LG settings…': 'Comprobando los ajustes de LG…',
       'Apply selected settings': 'Aplicar los ajustes seleccionados',
       'Restore selected settings': 'Restaurar los ajustes seleccionados',
@@ -152,6 +160,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Desactivar Live Plus',
       'Turn off advertising cookies': 'Desactivar las cookies publicitarias',
       'Limit ad tracking': 'Limitar el seguimiento publicitario',
+      'Turn off debug log uploads to LG':
+        'Desactivar el envío de registros de depuración a LG',
+      'Turn off fault log uploads to LG':
+        'Desactivar el envío de registros de fallos a LG',
       'Turn off Smart Tips': 'Desactivar los consejos inteligentes',
       'Turn off sports notifications':
         'Desactivar las notificaciones deportivas',
@@ -191,8 +203,8 @@ if (window.HomeI18n)
       'Theme applied': 'Thème appliqué',
       'The theme could not be applied. Select it again.':
         'Impossible d’appliquer le thème. Sélectionnez-le à nouveau.',
-      'Select which LG ads and recommendations to change.':
-        'Choisissez les réglages de publicité et de recommandations LG à modifier.',
+      'Select the LG settings you want to change.':
+        'Sélectionnez les réglages LG à modifier.',
       'Checking LG settings…': 'Vérification des réglages LG…',
       'Apply selected settings': 'Appliquer les réglages sélectionnés',
       'Restore selected settings': 'Rétablir les réglages sélectionnés',
@@ -214,6 +226,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Désactiver Live Plus',
       'Turn off advertising cookies': 'Désactiver les cookies publicitaires',
       'Limit ad tracking': 'Limiter le suivi publicitaire',
+      'Turn off debug log uploads to LG':
+        'Désactiver l’envoi des journaux de débogage à LG',
+      'Turn off fault log uploads to LG':
+        'Désactiver l’envoi des journaux d’erreurs à LG',
       'Turn off Smart Tips': 'Désactiver les conseils intelligents',
       'Turn off sports notifications': 'Désactiver les notifications sportives',
       'Already in the requested state': 'Le réglage a déjà la valeur demandée',
@@ -250,8 +266,8 @@ if (window.HomeI18n)
       'Theme applied': 'Tema applicato',
       'The theme could not be applied. Select it again.':
         'Impossibile applicare il tema. Selezionalo di nuovo.',
-      'Select which LG ads and recommendations to change.':
-        'Scegli quali impostazioni di pubblicità e suggerimenti LG modificare.',
+      'Select the LG settings you want to change.':
+        'Seleziona le impostazioni LG da modificare.',
       'Checking LG settings…': 'Verifica delle impostazioni LG…',
       'Apply selected settings': 'Applica le impostazioni selezionate',
       'Restore selected settings': 'Ripristina le impostazioni selezionate',
@@ -272,6 +288,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Disattiva Live Plus',
       'Turn off advertising cookies': 'Disattiva i cookie pubblicitari',
       'Limit ad tracking': 'Limita il tracciamento pubblicitario',
+      'Turn off debug log uploads to LG':
+        'Disattiva l’invio dei log di debug a LG',
+      'Turn off fault log uploads to LG':
+        'Disattiva l’invio dei log degli errori a LG',
       'Turn off Smart Tips': 'Disattiva i suggerimenti intelligenti',
       'Turn off sports notifications': 'Disattiva le notifiche sportive',
       'Already in the requested state': 'È già impostato il valore richiesto',
@@ -308,8 +328,8 @@ if (window.HomeI18n)
       'Theme applied': 'Motiv byl použit',
       'The theme could not be applied. Select it again.':
         'Motiv se nepodařilo použít. Vyberte ho znovu.',
-      'Select which LG ads and recommendations to change.':
-        'Vyberte, která nastavení reklam a doporučení LG chcete změnit.',
+      'Select the LG settings you want to change.':
+        'Vyberte nastavení LG, která chcete změnit.',
       'Checking LG settings…': 'Kontrola nastavení LG…',
       'Apply selected settings': 'Použít vybraná nastavení',
       'Restore selected settings': 'Obnovit vybraná nastavení',
@@ -326,6 +346,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Vypnout Live Plus',
       'Turn off advertising cookies': 'Vypnout reklamní soubory cookie',
       'Limit ad tracking': 'Omezit sledování pro reklamu',
+      'Turn off debug log uploads to LG':
+        'Vypnout odesílání ladicích protokolů společnosti LG',
+      'Turn off fault log uploads to LG':
+        'Vypnout odesílání protokolů o chybách společnosti LG',
       'Turn off Smart Tips': 'Vypnout chytré tipy',
       'Turn off sports notifications': 'Vypnout sportovní oznámení',
       'Already in the requested state': 'Požadovaná hodnota je již nastavena',
@@ -362,8 +386,8 @@ if (window.HomeI18n)
       'Theme applied': 'Motyw zastosowany',
       'The theme could not be applied. Select it again.':
         'Nie udało się zastosować motywu. Wybierz go ponownie.',
-      'Select which LG ads and recommendations to change.':
-        'Wybierz ustawienia reklam i rekomendacji LG, które chcesz zmienić.',
+      'Select the LG settings you want to change.':
+        'Wybierz ustawienia LG, które chcesz zmienić.',
       'Checking LG settings…': 'Sprawdzanie ustawień LG…',
       'Apply selected settings': 'Zastosuj wybrane ustawienia',
       'Restore selected settings': 'Przywróć wybrane ustawienia',
@@ -380,6 +404,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Wyłącz Live Plus',
       'Turn off advertising cookies': 'Wyłącz reklamowe pliki cookie',
       'Limit ad tracking': 'Ogranicz śledzenie reklamowe',
+      'Turn off debug log uploads to LG':
+        'Wyłącz wysyłanie dzienników debugowania do LG',
+      'Turn off fault log uploads to LG':
+        'Wyłącz wysyłanie dzienników awarii do LG',
       'Turn off Smart Tips': 'Wyłącz inteligentne wskazówki',
       'Turn off sports notifications': 'Wyłącz powiadomienia sportowe',
       'Already in the requested state': 'Żądana wartość jest już ustawiona',
@@ -417,8 +445,8 @@ if (window.HomeI18n)
       'Theme applied': 'Tema aplicado',
       'The theme could not be applied. Select it again.':
         'Não foi possível aplicar o tema. Selecione-o novamente.',
-      'Select which LG ads and recommendations to change.':
-        'Escolha as configurações de anúncios e recomendações da LG que deseja alterar.',
+      'Select the LG settings you want to change.':
+        'Selecione as configurações da LG que deseja alterar.',
       'Checking LG settings…': 'Verificando as configurações da LG…',
       'Apply selected settings': 'Aplicar as configurações selecionadas',
       'Restore selected settings': 'Restaurar as configurações selecionadas',
@@ -438,6 +466,10 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Desativar Live Plus',
       'Turn off advertising cookies': 'Desativar cookies de publicidade',
       'Limit ad tracking': 'Limitar o rastreamento de anúncios',
+      'Turn off debug log uploads to LG':
+        'Desativar o envio de registros de depuração à LG',
+      'Turn off fault log uploads to LG':
+        'Desativar o envio de registros de falhas à LG',
       'Turn off Smart Tips': 'Desativar dicas inteligentes',
       'Turn off sports notifications': 'Desativar notificações esportivas',
       'Already in the requested state': 'O valor solicitado já está definido',
@@ -476,8 +508,8 @@ if (window.HomeI18n)
       'Theme applied': 'Tema a fost aplicată',
       'The theme could not be applied. Select it again.':
         'Tema nu a putut fi aplicată. Selecteaz-o din nou.',
-      'Select which LG ads and recommendations to change.':
-        'Alege setările LG pentru reclame și recomandări pe care vrei să le modifici.',
+      'Select the LG settings you want to change.':
+        'Selectează setările LG pe care vrei să le modifici.',
       'Checking LG settings…': 'Se verifică setările LG…',
       'Apply selected settings': 'Aplică setările selectate',
       'Restore selected settings': 'Restabilește setările selectate',
@@ -500,6 +532,10 @@ if (window.HomeI18n)
       'Turn off advertising cookies':
         'Dezactivează modulele cookie publicitare',
       'Limit ad tracking': 'Limitează urmărirea publicitară',
+      'Turn off debug log uploads to LG':
+        'Dezactivează trimiterea jurnalelor de depanare către LG',
+      'Turn off fault log uploads to LG':
+        'Dezactivează trimiterea jurnalelor de erori către LG',
       'Turn off Smart Tips': 'Dezactivează sfaturile inteligente',
       'Turn off sports notifications': 'Dezactivează notificările sportive',
       'Already in the requested state': 'Valoarea solicitată este deja setată',
@@ -536,8 +572,8 @@ if (window.HomeI18n)
       'Theme applied': '테마가 적용되었습니다',
       'The theme could not be applied. Select it again.':
         '테마를 적용하지 못했습니다. 다시 선택하세요.',
-      'Select which LG ads and recommendations to change.':
-        '변경할 LG 광고 및 추천 설정을 선택하세요.',
+      'Select the LG settings you want to change.':
+        '변경할 LG 설정을 선택하세요.',
       'Checking LG settings…': 'LG 설정을 확인하는 중…',
       'Apply selected settings': '선택한 설정 적용',
       'Restore selected settings': '선택한 설정 복원',
@@ -554,6 +590,8 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Live Plus 끄기',
       'Turn off advertising cookies': '광고 쿠키 끄기',
       'Limit ad tracking': '광고 추적 제한',
+      'Turn off debug log uploads to LG': 'LG로 디버그 로그 전송 끄기',
+      'Turn off fault log uploads to LG': 'LG로 오류 로그 전송 끄기',
       'Turn off Smart Tips': '스마트 팁 끄기',
       'Turn off sports notifications': '스포츠 알림 끄기',
       'Already in the requested state': '이미 요청한 값으로 설정되어 있습니다',
@@ -590,8 +628,8 @@ if (window.HomeI18n)
       'Theme applied': 'थीम लागू हो गई',
       'The theme could not be applied. Select it again.':
         'थीम लागू नहीं हो सकी। इसे फिर से चुनें।',
-      'Select which LG ads and recommendations to change.':
-        'चुनें कि LG के विज्ञापनों और सुझावों की कौन-सी सेटिंग बदलनी हैं।',
+      'Select the LG settings you want to change.':
+        'LG की वे सेटिंग चुनें जिन्हें आप बदलना चाहते हैं।',
       'Checking LG settings…': 'LG की सेटिंग जाँची जा रही हैं…',
       'Apply selected settings': 'चुनी हुई सेटिंग लागू करें',
       'Restore selected settings': 'चुनी हुई सेटिंग वापस लाएँ',
@@ -609,6 +647,8 @@ if (window.HomeI18n)
       'Turn off Live Plus': 'Live Plus बंद करें',
       'Turn off advertising cookies': 'विज्ञापन कुकी बंद करें',
       'Limit ad tracking': 'विज्ञापन ट्रैकिंग सीमित करें',
+      'Turn off debug log uploads to LG': 'LG को डीबग लॉग भेजना बंद करें',
+      'Turn off fault log uploads to LG': 'LG को खराबी के लॉग भेजना बंद करें',
       'Turn off Smart Tips': 'स्मार्ट सुझाव बंद करें',
       'Turn off sports notifications': 'खेल की सूचनाएँ बंद करें',
       'Already in the requested state': 'सेटिंग में पहले से चुना हुआ मान है',
@@ -646,8 +686,7 @@ if (window.HomeI18n)
       'Theme applied': '主题已应用',
       'The theme could not be applied. Select it again.':
         '无法应用主题。请重新选择。',
-      'Select which LG ads and recommendations to change.':
-        '选择要调整的 LG 广告和推荐设置。',
+      'Select the LG settings you want to change.': '请选择要更改的 LG 设置。',
       'Checking LG settings…': '正在检查 LG 设置…',
       'Apply selected settings': '应用所选设置',
       'Restore selected settings': '还原所选设置',
@@ -664,6 +703,8 @@ if (window.HomeI18n)
       'Turn off Live Plus': '关闭 Live Plus',
       'Turn off advertising cookies': '关闭广告 Cookie',
       'Limit ad tracking': '限制广告跟踪',
+      'Turn off debug log uploads to LG': '关闭向 LG 上传调试日志',
+      'Turn off fault log uploads to LG': '关闭向 LG 上传故障日志',
       'Turn off Smart Tips': '关闭智能提示',
       'Turn off sports notifications': '关闭体育通知',
       'Already in the requested state': '当前已经是所需的值',
@@ -698,8 +739,7 @@ if (window.HomeI18n)
       'Theme applied': '已套用佈景主題',
       'The theme could not be applied. Select it again.':
         '無法套用佈景主題。請重新選擇。',
-      'Select which LG ads and recommendations to change.':
-        '選擇要調整的 LG 廣告和推薦設定。',
+      'Select the LG settings you want to change.': '請選擇要變更的 LG 設定。',
       'Checking LG settings…': '正在檢查 LG 設定…',
       'Apply selected settings': '套用所選設定',
       'Restore selected settings': '還原所選設定',
@@ -716,6 +756,8 @@ if (window.HomeI18n)
       'Turn off Live Plus': '關閉 Live Plus',
       'Turn off advertising cookies': '關閉廣告 Cookie',
       'Limit ad tracking': '限制廣告追蹤',
+      'Turn off debug log uploads to LG': '關閉向 LG 上傳偵錯記錄',
+      'Turn off fault log uploads to LG': '關閉向 LG 上傳故障記錄',
       'Turn off Smart Tips': '關閉智慧提示',
       'Turn off sports notifications': '關閉運動通知',
       'Already in the requested state': '目前已是所需的值',

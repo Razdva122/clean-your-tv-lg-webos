@@ -216,6 +216,8 @@ Si le téléviseur refuse un réglage, consultez le [guide de confidentialité �
 
 Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage.
 
+Dans Confidentialité, vous pouvez désactiver séparément l’envoi des journaux de débogage et des journaux d’erreurs à LG. Si la valeur initiale est illisible, le réglage est ignoré. En mode No-root, le micrologiciel peut refuser le changement. Certains téléviseurs réactivent l’envoi des journaux de débogage au démarrage. Vérifiez le réglage après avoir redémarré.
+
 Pour annuler une seule modification, ouvrez Debloat dans Maintenance avec la même connexion enregistrée au téléviseur. Choisissez le réglage, vérifiez sa valeur d’origine et confirmez. Sur les modèles compatibles, désactivez le démarrage automatique de LG Channels dans Tous les paramètres → Général → Chaînes → Démarrage automatique de LG Channels.
 
 Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enregistrées par Debloat. Si vous ignorez la restauration, la désinstallation se poursuit sans modifier ces réglages.
