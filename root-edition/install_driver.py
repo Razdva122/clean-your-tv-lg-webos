@@ -1247,6 +1247,9 @@ def main():
             result['reason']='restart-required'
         if args.action=='inspect' and isinstance(error,ValueError) and error.args==('project_apps_remain',):
             result['reason']='project-apps-remain'
+        if args.action in ('clean-remove', 'clean-status'):
+            # A fresh check of a completed removal must leave the durable fence intact.
+            result['last_failure'] = failure_summary(error)
         if args.action=='clean-remove':result['cleanup_error']=cleanup_failure(error)
         if args.action in ('install','remove') and not isinstance(error,Busy):
             result['action']=args.action

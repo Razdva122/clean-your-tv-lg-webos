@@ -327,6 +327,29 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(self.owner.status(),lease)
         self.assertEqual(self.owner.store.read('clean-removal-'+self.id),record)
 
+    def test_completed_removal_reports_new_home_conflicts_without_rewriting_fence(self):
+        import install_device, install_driver, io, json
+        from contextlib import redirect_stdout
+        self.original()
+        self.driver.clean_remove(self.id)
+        receipt = self.owner.store.read('clean-removal-' + self.id)
+        conflict = ValueError('PRIVATE')
+        conflict.home_conflict_paths = ['/media/developer/cleanyourtv', '/var/lib/luma-home']
+        for action, options in [('clean-remove', ['--payload', '/tmp/fixture']), ('clean-status', ['--verify-current'])]:
+            output = io.StringIO()
+            with self.subTest(action=action), patch.object(install_device, 'LocalDevice', return_value=self.device), \
+                    patch('installation.Store', return_value=self.owner.store), \
+                    patch.object(install_device, 'checked_store', return_value=self.owner.store), \
+                    patch.object(self.device, 'verify_clean', side_effect=conflict), \
+                    patch.object(self.device, 'preflight', create=True), patch.object(self.device, 'log', create=True), \
+                    patch.object(sys, 'argv', ['install_driver', action, '--operation', self.id, *options]), redirect_stdout(output):
+                install_driver.main()
+            result = json.loads(output.getvalue())
+            self.assertEqual(result['state'], 'recovery_required')
+            self.assertEqual(result.get('last_failure', {}).get('home_conflict_paths'), conflict.home_conflict_paths)
+            self.assertNotIn('PRIVATE', output.getvalue())
+            self.assertEqual(self.owner.store.read('clean-removal-' + self.id), receipt)
+
     def test_pending_removal_cannot_handoff_to_new_install(self):
         self.device.fail='private-cleanup';self.driver.clean_remove(self.id)
         with self.assertRaises(Busy):self.driver._run('b'*32,'install',lambda checkpoint:self.fail('executed'))
