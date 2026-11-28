@@ -9,6 +9,52 @@ from cytv import cli, state
 
 
 class CLITests(unittest.TestCase):
+    def test_pending_install_cli_shows_separate_uninstall_command(self):
+        from unittest.mock import MagicMock
+        from cytv.terminal import Console
+
+        for edition, extra in [('root', []), ('root', ['--root-variant', 'node012-beta']),
+                               ('no-root', []), ('no-root', ['--connection', 'root-ssh'])]:
+            for frontend, noninteractive, requested in [('console', False, 'install'),
+                    ('desktop', False, 'install'), ('android', False, 'install'),
+                    ('console', True, 'install'), ('console', False, 'recover')]:
+                with self.subTest(edition=edition, extra=extra, frontend=frontend,
+                                 noninteractive=noninteractive, requested=requested), \
+                        tempfile.TemporaryDirectory() as tmp, \
+                        patch('cytv.cli.package.verify_payload', return_value={}), \
+                        patch('cytv.cli.Installer') as cls:
+                    profile = state.target('192.0.2.10', edition,
+                        **({'root_variant': 'node012-beta'} if '--root-variant' in extra else
+                           {'connection': 'root-ssh'} if '--connection' in extra else {}))
+                    store = state.Store(tmp)
+                    store.save(profile)
+                    (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
+                    store.begin(profile, 'install', stage='setup')
+                    original = store.pending(profile)
+                    cls.return_value.store, cls.return_value.profile = store, profile
+                    output = []
+                    write = Console(output.append, interactive=False)
+                    write.frontend = frontend
+                    flags = ['--non-interactive'] if noninteractive else []
+                    with patch('cytv.recovery.recover') as recover:
+                        cli.main([requested, '--host', profile['host'], '--edition', edition,
+                                  '--data-dir', tmp, '--yes', '--language', 'en'] + extra + flags,
+                                 write=write, connect=lambda *_: MagicMock(), ask=lambda _: 'y')
+                        self.assertEqual(recover.call_count, 1, '\n'.join(output))
+                    command = 'cytv uninstall --edition ' + edition
+                    if extra:
+                        command += ' ' + ' '.join(extra)
+                    text = '\n'.join(output)
+                    if frontend == 'console' and not noninteractive and requested == 'install':
+                        self.assertIn(command, output)
+                        self.assertIn('saved preferences will be removed', text)
+                        self.assertIn('same executable', text)
+                    else:
+                        self.assertNotIn(command, text)
+                    self.assertEqual(store.pending(profile), original)
+                    cls.return_value.uninstall.assert_not_called()
+                    cls.return_value.install.assert_not_called()
+
     def test_43uk6450plc_legacy_root_refusal_exports_preflight_evidence(self):
         from tests.cytv.test_operations import OperationTests, Remote
 
@@ -354,8 +400,10 @@ class CLITests(unittest.TestCase):
                 store.save(profile)
                 remote = Mock(root=root)
                 if root:
+                    # An older Root service can reject the optional domain-status probe.
                     remote.luna.side_effect = [
                         {'returnValue': False},
+                        *([{'returnValue': False}] if edition == 'root' else []),
                         {'returnValue': True, 'settings': {'homePromotion': 'on'}},
                         {'returnValue': True},
                         {'returnValue': True, 'settings': {'homePromotion': 'off'}},
@@ -387,7 +435,7 @@ class CLITests(unittest.TestCase):
                 remote.close.assert_called_once_with()
                 self.assertIsNone(store.pending(profile))
                 if outcome in ('cancelled', 'declined'):
-                    self.assertEqual(remote.luna.call_count, 1)  # Read-only TV metadata.
+                    self.assertEqual(remote.luna.call_count, 1 + (edition == 'root'))  # Read-only probes.
                     remote.run.assert_not_called()
                     pair.assert_not_called()
                     continue
@@ -397,7 +445,7 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(report['debloat'], {'homePromotion': outcome})
                 if root:
                     pair.assert_not_called()
-                    self.assertEqual(remote.luna.call_count, 4)  # Metadata, original, write, readback.
+                    self.assertEqual(remote.luna.call_count, 4 + (edition == 'root'))  # Probes, original, write, readback.
                     remote.run.assert_not_called()
                     remote.luna.assert_any_call(
                         'com.webos.settingsservice/setSystemSettings',

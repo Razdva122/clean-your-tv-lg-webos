@@ -14,6 +14,8 @@
       webOSPromotionVideo: 'Turn off webOS promotional video',
       livePlus: 'Turn off Live Plus',
       adCookie: 'Turn off advertising cookies',
+      dbgLogUpload: 'Turn off debug log uploads to LG',
+      faultLogUpload: 'Turn off fault log uploads to LG',
       lmt: 'Limit ad tracking',
       aiNudge: 'Turn off Smart Tips',
       sportsAlarm: 'Turn off sports notifications'
@@ -35,6 +37,8 @@
       'restore-unavailable': 'This setting is unavailable on this TV.',
       'restore-unverified':
         'The change could not be verified. Check LG Settings.',
+      'restore-rejected':
+        'The TV rejected the request to restore this setting.',
       'restore-failed': 'Could not restore the setting'
     },
     panel,
@@ -128,7 +132,7 @@
       }
     });
   }
-  function launchApplication(destination) {
+  function launchApplication(destination, guideUrl) {
     if (busy) return;
     var returnHome = destination === 'home';
     busy = true;
@@ -146,6 +150,7 @@
       busy = false;
       if (!accepted)
         notice =
+          guideUrl ||
           'Homebrew could not access LG Settings. Check status and try again.';
       render();
     }
@@ -166,10 +171,12 @@
         JSON.stringify(
           returnHome
             ? { id: 'com.cleanyourtv.root.preview' }
-            : {
-                id: 'io.github.razdva122.cytvinstaller',
-                params: { cytvDebloat: true }
-              }
+            : guideUrl
+              ? { id: 'com.webos.app.browser', params: { target: guideUrl } }
+              : {
+                  id: 'io.github.razdva122.cytvinstaller',
+                  params: { cytvDebloat: true }
+                }
         )
       );
     } catch (_) {
@@ -282,6 +289,11 @@
         render();
       });
   }
+  function stateLabel(key, value) {
+    if (key === 'dbgLogUpload' || key === 'faultLogUpload')
+      return value === true ? 'On' : value === false ? 'Off' : null;
+    return value === 'on' ? 'On' : value === 'off' ? 'Off' : null;
+  }
   function renderDebloat() {
     var status = node(
       card,
@@ -289,7 +301,7 @@
       notice ||
         (busy
           ? 'Checking LG settings…'
-          : 'Select which LG ads and recommendations to change.')
+          : 'Select the LG settings you want to change.')
     );
     status.setAttribute('role', 'status');
     var rows = node(card, 'div');
@@ -314,7 +326,7 @@
         busy ||
         !keys.length ||
         keys.some(function (key) {
-          return settings[key].value !== 'on' && settings[key].value !== 'off';
+          return !stateLabel(key, settings[key].value);
         });
       restore.disabled =
         busy ||
@@ -335,20 +347,30 @@
           }),
           detail = Object.prototype.hasOwnProperty.call(outcomes, results[key])
             ? outcomes[results[key]]
-            : option.value === 'on'
-              ? 'On'
-              : option.value === 'off'
-                ? 'Off'
-                : 'This setting is unavailable on this TV.';
+            : stateLabel(key, option.value) ||
+              'This setting is unavailable on this TV.';
         control.id = 'cytvDebloat-' + key;
         control.setAttribute('role', 'checkbox');
         control.setAttribute('aria-checked', String(!!selected[key]));
         control.disabled =
-          busy ||
-          (option.value !== 'on' &&
-            option.value !== 'off' &&
-            option.saved !== true);
+          busy || (!stateLabel(key, option.value) && option.saved !== true);
         node(row, 'span', detail);
+        if (
+          (results[key] === 'write-rejected' ||
+            results[key] === 'restore-rejected') &&
+          /^[a-z-]+$/.test(option.guide || '')
+        ) {
+          var file =
+            root.HomeI18n.language() === 'ru' ? 'PRIVACY.ru.md' : 'PRIVACY.md';
+          var guideUrl =
+            'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/' +
+            file +
+            '#' +
+            option.guide;
+          button(row, 'Open privacy guide', function () {
+            launchApplication('guide', guideUrl);
+          }).disabled = busy;
+        }
       });
     update();
     button(actions, 'Check status', readSettings).disabled = busy;

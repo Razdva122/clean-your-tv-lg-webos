@@ -1,122 +1,88 @@
 {
   "schema": 1,
-  "version": "1.30.0",
+  "version": null,
   "changes": [
     {
-      "pr": 845,
+      "pr": 861,
       "issues": [
-        841
+        410
       ],
-      "summary": "Fix premature No-root removal process blocking (#841)"
+      "summary": "Show the CLI uninstall command before pending-install recovery"
     },
     {
-      "pr": 846,
+      "pr": 862,
       "issues": [
-        152
+        101
       ],
-      "summary": "Verify Helper startup and guard No-root removal of package runtimes (#152)"
+      "summary": "Record verified Root setup on LG OLED65C2AUA"
     },
     {
-      "pr": 847,
+      "pr": 865,
+      "issues": [],
+      "summary": "Defer the LG screensaver while the inline CYTV saver is visible"
+    },
+    {
+      "pr": 867,
       "issues": [
-        830
+        741
       ],
-      "summary": "Resume No-root removal after a verified Root handoff (#830)"
+      "summary": "Record LG C1 and C2 standby Home verification"
     },
     {
-      "pr": 848,
+      "pr": 869,
+      "issues": [],
+      "summary": "Plan the project TV window at candidate dispatch"
+    },
+    {
+      "pr": 870,
+      "issues": [],
+      "summary": "Verify the signed Engine transition before candidate builds"
+    },
+    {
+      "pr": 871,
+      "issues": [],
+      "summary": "Replay affected Guardian shutdown cases before candidate builds"
+    },
+    {
+      "pr": 872,
+      "issues": [],
+      "summary": "Run Intel macOS installer tests in two isolated workers"
+    },
+    {
+      "pr": 873,
+      "issues": [],
+      "summary": "Add opt-in controls for LG debug and fault log uploads"
+    },
+    {
+      "pr": 874,
+      "issues": [],
+      "summary": "Add optional Root blocking for LG ad and tracking domains"
+    },
+    {
+      "pr": 879,
+      "issues": [],
+      "summary": "Guide LG owners through privacy settings and link refused Debloat changes"
+    },
+    {
+      "pr": 880,
       "issues": [
-        116
+        818
       ],
-      "summary": "Improve shared Root staging and Home integration checks. The corrected Homebrew Installer remains unpublished."
+      "summary": "Wait for LG Home on IR presses from Live TV"
     },
     {
-      "pr": 849,
+      "pr": 881,
       "issues": [
-        368
+        875
       ],
-      "summary": "Preserve pending Root uninstall receipts across saved connections and nested retry records (partial recovery fix)"
+      "summary": "Report detected Home conflict paths on Root install and cleanup failures"
     },
     {
-      "pr": 850,
-      "issues": [
-        635
-      ],
-      "summary": "Record the OLED55C47LA Home button result"
-    },
-    {
-      "pr": 851,
+      "pr": 882,
       "issues": [],
-      "summary": "Add individual Debloat restoration and LG promotion controls"
-    },
-    {
-      "pr": 852,
-      "issues": [
-        364
-      ],
-      "summary": "Report Magic Remote Home and Back capabilities in Root Doctor"
-    },
-    {
-      "pr": 853,
-      "issues": [],
-      "summary": "Include shared launcher and edition-transition safeguards. The single-tile generation remains unpublished."
-    },
-    {
-      "pr": 855,
-      "issues": [],
-      "summary": "Include shared Debloat changes and Root setup resources. On-TV first-run setup through Homebrew remains unpublished."
-    },
-    {
-      "pr": 856,
-      "issues": [
-        116
-      ],
-      "summary": "Improve shared diagnostics and packaged Root setup resources. Homebrew on-TV checks and diagnostic reports remain unpublished."
-    },
-    {
-      "pr": 857,
-      "issues": [],
-      "summary": "Cover the Root first-run translation catalog in CI"
-    },
-    {
-      "pr": 858,
-      "issues": [],
-      "summary": "Use system Chrome for Homebrew setup tests in runtime CI"
-    },
-    {
-      "pr": 860,
-      "issues": [],
-      "summary": "Include shared Root cleanup runtime and installer support. The Homebrew full-removal entry remains unpublished."
-    },
-    {
-      "pr": 864,
-      "issues": [],
-      "summary": "Include shared No-root installer support and pairing handling. On-TV No-root fallback remains unpublished."
-    },
-    {
-      "pr": 866,
-      "issues": [],
-      "summary": "Restore Homebrew export font inputs, localize the tile verification error and align the installer regression fixtures."
-    },
-    {
-      "pr": 868,
-      "issues": [],
-      "summary": "Make the Helper startup fixture portable to Windows and keep the staging ownership fixture on POSIX hosts"
-    },
-    {
-      "pr": 876,
-      "issues": [
-        364
-      ],
-      "summary": "Keep Root Doctor scanning past stale input nodes with no device registered in sysfs"
+      "summary": "Fix TV Installer recovery after verified desktop removal"
     }
   ],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA on firmware 43.21.71 and webOS SDK 11.2.0. RC3 macOS ARM64 Doctor verified advertised Home and Back. Matching RC2 device inputs cover No-root upgrade, Root startup, network HOME, both verified clean removals with confirmed software restarts, fresh Root admission and individual Debloat restoration. Exact Android and protected System verification passed. Physical remote, standby, cold boot, audio, live OTA/rollback and reporter hardware were not exercised. Evidence: docs/history/2026-11-28-release-1.30.0-final-acceptance.md.",
-  "build": {
-    "run_id": 46070775288,
-    "attempt": 1,
-    "source": "dc9196fd1258cd38900db023f4b9cbd3ce76c68a"
-  },
-  "acceptance_build": "46070775288:1"
+  "acceptance": ""
 }

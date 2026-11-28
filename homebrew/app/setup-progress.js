@@ -104,6 +104,15 @@
     });
     var active = steps[position],
       activation = operation.activation || {};
+    if (
+      noRoot &&
+      operation.stage === 'complete' &&
+      operation.code === 'current-state-unverified'
+    ) {
+      checks['install-readback'] = 'unknown';
+      checks['activate-home'] = 'unknown';
+      return checks;
+    }
     if (failure || operation.state === 'unknown') checks[active] = 'unknown';
     else if (operation.state === 'recovery_required') checks[active] = 'fail';
     else if (

@@ -477,6 +477,9 @@ def create_candidate(head, published, version, record):
         summary = f'Frozen candidate for {title}. See the generated record for the selected build and acceptance.'
     else:
         summary = f'Unfrozen draft after {published}. Final target: TBD.'
+    template = (ROOT / '.github/PULL_REQUEST_TEMPLATE/release.md').read_text(encoding='utf-8')
+    start = template.index('## Release timings\n')
+    timings = template[start:template.index('\n## ', start)].rstrip()
     body = ['## Release candidate', '',
             summary,
             f'Base: `main`. Head: `release/next`. Initial source: `{head}`.', '',
@@ -487,6 +490,7 @@ def create_candidate(head, published, version, record):
             '## Physical acceptance and limitations', '',
             'Record scenario artifacts, device/state preconditions,',
             'observed results, rollback and untested paths here.', '',
+            timings, '',
             '## Release gates', '',
             '- [ ] Collect implementation PRs/issues in the committed plan.',
             '- [ ] Finalize versions/manifests and release notes.',

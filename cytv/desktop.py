@@ -131,6 +131,9 @@ class DesktopConsole(Console):
     def installation_settings(self, value):
         self.emit('installation-settings', {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool})
 
+    def debloat_guide(self, key, status):
+        self.emit('debloat-guide', (key, status))
+
     def debloat_results(self, results):
         self.emit('debloat-results', dict(results))
 

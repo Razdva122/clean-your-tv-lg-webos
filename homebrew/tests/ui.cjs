@@ -187,10 +187,10 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         window.saved = ID;
         if (state.savedOperation) {
           localStorage.setItem('cytv.installer.operation', ID);
-          if (state.edition === 'no-root')
+          if (state.edition === 'no-root' || state.savedEdition === 'no-root')
             localStorage.setItem(
               'cytv.installer.operation.edition',
-              state.edition
+              state.savedEdition || state.edition
             );
         }
         if (state.noHbc) return;
@@ -320,6 +320,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
                 },
                 candidate_sha256: SHA,
                 payload_sha256: window.model.pin,
+                superseded_no_root_operation: window.model.superseded,
                 active_operation: window.model.active || null,
                 runtime: window.model.runtime
               };
@@ -427,6 +428,49 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       )
     ]);
     await fallback.context.close();
+
+    for (const superseded of [ID, undefined]) {
+      const reopened = await fixture({
+        state: 'fresh',
+        savedEdition: 'no-root',
+        checks: { 'homebrew-access': 'pass' },
+        savedOperation: true,
+        superseded,
+        noRootStatus: {
+          state: 'recovery_required',
+          edition: 'no-root',
+          operation: ID,
+          stage: 'complete',
+          code: 'current-state-unverified'
+        }
+      });
+      const page = reopened.page;
+      await page
+        .locator(
+          superseded ? '[data-screen=review]' : '[data-screen=no-root-recovery]'
+        )
+        .waitFor();
+      assert.equal(
+        await page.evaluate(() =>
+          localStorage.getItem('cytv.installer.operation')
+        ),
+        superseded ? null : ID
+      );
+      assert(
+        !(await page.evaluate(() => window.calls)).some((command) =>
+          command.includes(' install ')
+        )
+      );
+      if (!superseded) {
+        await page.locator('#save-report').click();
+        const report = JSON.parse(
+          await page.locator('#diagnostic-json').textContent()
+        );
+        assert.equal(report.checks['homebrew-access'], 'pass');
+        assert.equal(report.checks['activate-home'], 'unknown');
+      }
+      await reopened.context.close();
+    }
 
     const russianFallback = await fixture(
       {

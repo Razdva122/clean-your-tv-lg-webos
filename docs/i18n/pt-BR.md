@@ -213,9 +213,15 @@ Abra Configurações → Papéis de parede → Enviar do telefone e leia o códi
 
 Antes de escolher um tema, use **Debloat** para selecionar quais opções de anúncios, recomendações, privacidade e notificações da LG você quer alterar. Confira cada resultado. Se o instalador não conseguir ler o valor original, não poderá salvá-lo para reversão automática. Escolha **Pular Debloat** para manter as configurações atuais.
 
+Se a TV recusar uma alteração, siga as [instruções de privacidade para o seu modelo usando o controle remoto (em inglês)](../PRIVACY.md).
+
 As duas edições podem desativar as transmissões promocionais da LG quando a TV oferece essa configuração.
 
+Em Privacidade, você pode desativar separadamente o envio de registros de depuração e de falhas à LG. Se o valor original não puder ser lido, a configuração será ignorada. No modo No-root, o firmware pode recusar a alteração. Algumas TVs reativam o envio de registros de depuração ao ligar. Confira a configuração depois de reiniciar.
+
 Para desfazer apenas uma alteração, abra o Debloat em Manutenção com a mesma conexão salva da TV. Escolha uma configuração, confira o valor original e confirme. Nas TVs compatíveis, desative o início automático do LG Channels em Todas as configurações → Geral → Canais → Iniciar LG Channels automaticamente.
+
+Na edição Root, abra Manutenção → Debloat → Bloqueio de domínios de publicidade e rastreamento. Ative para bloquear os domínios selecionados nesta TV. Desative para restaurar o arquivo hosts original. Alguns aplicativos ainda podem mostrar anúncios. Confira a opção após atualizar o Root.
 
 Durante a desinstalação, você pode restaurar os valores originais salvos pelo Debloat. Se pular a restauração, a desinstalação continua sem alterar esses ajustes.
 

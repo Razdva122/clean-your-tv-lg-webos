@@ -22,14 +22,15 @@ remain intact. An edition fallback determines the final mode before customizatio
 ## Debloat
 
 The optional Debloat step comes before customization. The desktop wizard starts
-with the eleven LG settings selected and applies them on Continue.
+with the advertising, recommendation, tracking and notification settings selected.
+Both log upload controls start unchecked. Continue applies the current selection.
 Maintenance starts with all groups unchecked.
 With root SSH, both editions read and write through the LG Settings Service.
 No-root in Developer Mode writes through a separate SSAP pairing requesting
 the regular `WRITE_SETTINGS` permission. It reads preferences through Developer
-Mode SSH and can also read Live Plus through SSAP. The file reader returns
-only the requested `on` or `off` value. A firmware may expose a setting
-without making its value readable to the installer.
+Mode SSH and can also read Live Plus and the two log upload settings through
+SSAP. The file reader returns only the requested switch value. Firmware may
+expose a setting without making its value readable to the installer.
 
 The installer skips values that already match. Before a selected write with a
 readable original, it saves the original and requested value in the private
@@ -38,7 +39,8 @@ subsequent installations. The record captures pre-write values for future
 restoration support. Its presence alone does not prove that a write changed
 the setting.
 Selected settings with unreadable originals can be sent without adding a
-restore entry. Interactive removal offers to restore saved settings, with Skip as the default.
+restore entry, except for promotional streams and the two log upload settings.
+Interactive removal offers to restore saved settings, with Skip as the default.
 Before confirmation it shows each planned change from the current value to the
 saved original. It uses the existing Root SSH or Developer Mode settings
 connection and rechecks each displayed value before writing. Settings already
@@ -64,8 +66,15 @@ console installs using `--yes`.
 | Choice | Developer Mode | No-root with root SSH | Root edition with root SSH |
 | --- | --- | --- | --- |
 | LG promotional streams | Paired SSAP write if the original is readable and the firmware accepts the request | LG Settings Service | LG Settings Service |
+| Debug log uploads to LG | Paired SSAP write after reading the original | LG Settings Service | LG Settings Service |
+| Fault log uploads to LG | Paired SSAP write after reading the original | LG Settings Service | LG Settings Service |
 
-The installer skips promotional streams when it cannot read the original value.
+All three choices require a readable original. For uploads, both the desktop
+installer and the Homebrew settings panel save and restore the native JSON
+boolean. The keys are `option/dbgLogUpload` and `option/faultLogUpload`.
+Glasshouse reports that some TVs can re-enable debug log uploads at startup.
+CYTV verifies the current value after a change. Checking again after a restart
+requires a new read. See the [Glasshouse settings definitions](https://github.com/rorygallagher2024/glasshouse/blob/main/server/lib/lgsettings.js).
 
 [Reveal80's debloater](https://github.com/Reveal80/lg-webos-debloat) reports
 the extra promotion switch on webOS 22. Its reversible app hiding also removes
@@ -77,8 +86,50 @@ behavior after standby and cold boot, and a way to restore the original
 policy during normal use.
 [CleanYourTV for LG webOS](https://lasharor.github.io/cleanyourtv-WebOS/debloat/)
 also controls telemetry services and ad domains while its launcher is Home.
-That approach requires coordination with stock Home restoration and other
-hosts-file managers. It remains a separate Root candidate.
+
+### Root domain blocking
+
+After installing a compatible Root edition, open **Maintenance → Adjust LG settings
+(Debloat) → Ad and tracking domain blocking** using its saved Root SSH profile.
+If offered a saved LG setting to restore, choose **Adjust LG settings (Debloat)**
+to continue. The default choice keeps the current configuration. **On** applies
+the list below. **Off** removes the CYTV mount and its saved preference. The
+installer reads the service state again after a change. A pending or incomplete
+state means the read-only table has not been verified. Restart the TV and reopen
+Debloat if a mount is busy. Another tool’s hosts mount can prevent activation.
+If another mount covers CYTV’s table, turn off that tool through its own controls
+before choosing Off here. CYTV leaves the other tool’s mount in place.
+
+The initial list contains the following exact names.
+
+| Purpose | Hostnames |
+| --- | --- |
+| LG advertising | `ad.lgappstv.com`, `ad.lgsmartad.com`, `info.lgsmartad.net`, `lgads.tv` |
+| Regional advertising | `us.ad.lgsmartad.com`, `gb.ad.lgsmartad.com`, `de.ad.lgsmartad.com`, `pt.ad.lgsmartad.com`, `fi.info.lgsmartad.com` |
+| Tracking and ad usage | `tracking.lgtvsdp.com`, `aic.api.adts.lgtvcommon.com` |
+| Alphonso automatic content recognition | `prov-lg.alphonso.tv`, `eulacheck.alphonso.tv`, `eu-acr34.alphonso.tv`, `eu-acr86.alphonso.tv`, `tkacr37.alphonso.tv`, `tkacr41.alphonso.tv` |
+
+The list draws on the [Glasshouse implementation](https://github.com/rorygallagher2024/glasshouse/blob/v0.162.0/server/lib/privacy.js),
+[observed US ACR traffic](https://github.com/IlgarNEU/Watching-the-Watchers),
+[a Portuguese DNS capture](https://gist.github.com/nuno-f-rocha-alb/b45ab4f2471c38b3697c0e1ebea3d48a)
+and the [LG domain guide](https://cleanyour.tv/not-android#lg-2025). Clock,
+store, update and LG Channels service domains stay available. Cached connections,
+other hostnames, hard-coded IPs and apps using an independent resolver can
+still reach advertising or tracking services. No blocklist download, proxy or
+router change is involved.
+
+The existing private Root service calls the verified runtime inside the system
+mount namespace. It copies the current `/etc/hosts` bytes, appends exact IPv4
+and IPv6 sinkhole entries, and bind-mounts that copy read-only. The generated
+file `domain-blocking.hosts` in the Root private state records opt-in. A checksum
+protects against silently discarding changes to the generated file. Symlinks,
+conflicting custom mappings and foreign mounts prevent takeover. Off exposes
+the underlying hosts file, including any changes made to it independently.
+The existing Root startup callback can rebuild the table from the current
+firmware hosts file after a normal boot. If startup recovery or mount isolation
+prevents this, Debloat shows the inactive state. Removing Root clears the option.
+Updates that suspend Root clear it before replacing the runtime, including when
+an update is later cancelled. Enable it again after the update if desired.
 
 A generic No-root rejection of Home Promotion or Content Recommendation includes
 the [LG manual path for webOS 6 and 22](https://www.lg.com/nz/support/product-support/troubleshooting/help-library/cs-CT52007864-20153529296644OLT/).

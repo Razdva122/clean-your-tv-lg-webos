@@ -187,9 +187,15 @@ Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vybert
 
 Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, doporučení, soukromí a oznámení LG chcete změnit. Zkontrolujte každý výsledek. Pokud instalátor nemůže přečíst původní hodnotu, nemůže ji uložit pro automatické obnovení. Volbou **Přeskočit Debloat** zachováte aktuální nastavení.
 
+Pokud televizor změnu odmítne, vyhledejte postup pro svůj model v [průvodci nastavením soukromí pomocí ovladače (anglicky)](../PRIVACY.md).
+
 Obě edice mohou vypnout propagační vysílání LG, pokud televizor toto nastavení nabízí.
 
+V nastavení soukromí můžete samostatně vypnout odesílání ladicích protokolů a protokolů o chybách společnosti LG. Nastavení se přeskočí, pokud nelze přečíst jeho původní hodnotu. V režimu No-root může firmware změnu odmítnout. Některé televizory při spuštění odesílání ladicích protokolů opět zapnou. Po restartu nastavení zkontrolujte.
+
 Chcete-li vrátit jednu změnu, otevřete Debloat v nabídce údržby se stejným uloženým připojením k televizoru. Vyberte nastavení, zkontrolujte původní hodnotu a potvrďte obnovení. Na podporovaných televizorech můžete automatické spuštění LG Channels vypnout v nabídce Všechna nastavení → Obecné → Kanály → Automatické spuštění LG Channels.
+
+V edici Root otevřete Údržba → Debloat → Blokování reklamních a sledovacích domén. Zapnutím zablokujete vybrané domény v tomto televizoru. Vypnutím obnovíte původní soubor hosts. Některé aplikace mohou reklamy zobrazovat dál. Po aktualizaci Root nastavení znovu zkontrolujte.
 
 Při odinstalaci můžete potvrdit obnovení uložených původních nastavení Debloat. Pokud obnovení přeskočíte, odinstalace pokračuje bez jejich změny.
 

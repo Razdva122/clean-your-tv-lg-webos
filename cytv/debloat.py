@@ -5,11 +5,12 @@ import shlex
 import time
 
 from . import prompts
-from .debloat_policy import GROUPS, SETTINGS
+from .debloat_policy import GROUPS, LOG_UPLOADS, SETTINGS, valid_value, valid_record
 from .errors import UserError, TVRejected
-from .i18n import translate as tr
+from .i18n import resolved_language, translate as tr
 from .state import private_write
 from .tv import SSAP
+from . import debloat_policy
 
 TITLE = 'Debloat'
 SELECT = 'Select Debloat settings: '
@@ -29,6 +30,8 @@ SETTING_NAMES = {
     'livePromotion': 'Promotions while watching',
     'webOSPromotionVideo': 'webOS promotional video',
     'livePlus': 'Live Plus',
+    'dbgLogUpload': 'Debug log uploads to LG',
+    'faultLogUpload': 'Fault log uploads to LG',
     'adCookie': 'Advertising cookies',
     'lmt': 'Ad tracking limit',
     'aiNudge': 'Smart Tips',
@@ -49,6 +52,7 @@ RESTORE_RESULTS = {
     'restore-already': ('✓', '#b4ada4', 'Already at the saved original value'),
     'restore-unavailable': ('–', '#b4ada4', 'Could not read the current value'),
     'restore-unverified': ('?', '#b4ada4', 'Could not verify the restored value'),
+    'restore-rejected': ('×', '#ff8580', 'The TV rejected the request to restore this setting.'),
     'restore-failed': ('×', '#ff8580', 'Could not restore the setting'),
 }
 RESULTS.update(RESTORE_RESULTS)
@@ -68,11 +72,28 @@ try {
     var info = fs.statSync(path);
     if (info.isFile() && info.size <= 1048576) {
         var data = JSON.parse(fs.readFileSync(path, 'utf8'));
-        if (data[args[1]] === 'on' || data[args[1]] === 'off') value = data[args[1]];
+        var setting = data[args[1]];
+        if (typeof setting === 'boolean' || setting === 'on' || setting === 'off') value = setting;
     }
 } catch (error) {}
 process.stdout.write(JSON.stringify(value));
 '''
+
+
+def privacy_guide(key, status):
+    section = debloat_policy.guide_section(key, status)
+    if section:
+        guide = 'PRIVACY.ru.md' if resolved_language() == 'ru' else 'PRIVACY.md'
+        return f'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/{guide}#{section}'
+
+
+def report_guide(write, key, status):
+    guide = privacy_guide(key, status)
+    if guide:
+        if write.frontend == 'desktop':
+            write.debloat_guide(key, status)
+        else:
+            write.raw(guide)
 
 
 def result_message(key, status):
@@ -92,42 +113,58 @@ def read(remote, category, key):
         else:
             command = shlex.join(['/usr/bin/node', '-e', READ_PREFERENCE, json.dumps([category, key])])
             value = json.loads(remote.run(command, timeout=5))
-        return value if value in ('on', 'off') else None
+        return value if valid_value(key, value) else None
     except Exception:
         return None
 
 
 def read_ssap(tv, category, key):
-    # Only Live Plus is known to be readable over paired SSAP.
-    if tv is None or key != 'livePlus':
+    if tv is None or (key != 'livePlus' and key not in LOG_UPLOADS):
         return None
     try:
         reply = tv.call('ssap://settings/getSystemSettings', {'category': category, 'keys': [key]}, timeout=5)
         value = reply.get('settings', {}).get(key) if reply.get('returnValue') is True else None
-        return value if value in ('on', 'off') else None
+        return value if valid_value(key, value) else None
     except Exception:
         return None
 
 
 def read_current(remote, category, key, tv):
-    return read(remote, category, key) or read_ssap(tv, category, key)
+    current = read(remote, category, key)
+    return current if current is not None else read_ssap(tv, category, key)
 
 
 def set_value(remote, tv, category, key, value):
     payload = {'category': category, 'settings': {key: value}}
-    if tv is not None:
-        return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
-    return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+    try:
+        if tv is not None:
+            return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
+        return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+    except TVRejected:
+        return {'returnValue': False}
+    except UserError as exc:
+        if exc.reason_code == 'ssap-request-rejected':
+            return {'returnValue': False}
+    except Exception:
+        pass
+    return None
 
 
-def verify_value(remote, tv, category, key, value, previous):
-    actual = read_current(remote, category, key, tv)
+def verify_value(remote, tv, category, key, value, previous, *, paired_upload=False):
+    def readback():
+        # A stale file can already contain the target before the SSAP write.
+        # If SSAP supplied the upload switch, verify through the same source.
+        if paired_upload:
+            return read_ssap(tv, category, key)
+        return read_current(remote, category, key, tv)
+
+    actual = readback()
     # The on-disk snapshot can lag the SSAP action. Retry reads only.
     for delay in (.25, .5, 1):
         if actual == value or (actual is None and previous is None):
             break
         time.sleep(delay)
-        actual = read_current(remote, category, key, tv)
+        actual = readback()
     return actual
 
 
@@ -145,13 +182,7 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
         return
 
     entries = journal['settings']
-    eligible = [
-        key for key, (_, _, target) in SETTINGS.items()
-        if isinstance(entries.get(key), dict)
-        and entries[key].get('target') == target
-        and entries[key].get('original') in ('on', 'off')
-        and entries[key]['original'] != target
-    ]
+    eligible = [key for key in SETTINGS if valid_record(key, entries.get(key))]
     if not eligible:
         return
     if maintenance:
@@ -169,20 +200,29 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
     with ExitStack() as stack:
         tv = None
         current_values = {key: read(remote, SETTINGS[key][0], key) for key in eligible}
-        # Live Plus can be read over an existing pairing without a TV prompt.
-        if not remote.root and 'livePlus' in current_values and current_values['livePlus'] is None:
+        paired_preview = set()
+        paired_reads = [key for key, current in current_values.items()
+                        if key in LOG_UPLOADS or (key == 'livePlus' and current is None)]
+        if not remote.root and paired_reads:
             try:
+                # Only prompt for pairing before the preview when the owner
+                # explicitly selected a saved upload setting in Maintenance.
+                reuse_only = not (maintenance and eligible[0] in LOG_UPLOADS)
                 tv = stack.enter_context(SSAP(profile['host'], path.parent, write,
-                                             settings_write=True, reuse_only=True))
+                                             settings_write=True, reuse_only=reuse_only))
             except Exception:
                 pass
-            current_values['livePlus'] = read_ssap(tv, SETTINGS['livePlus'][0], 'livePlus')
+            for key in paired_reads:
+                paired_value = read_ssap(tv, SETTINGS[key][0], key)
+                if paired_value is not None:
+                    current_values[key] = paired_value
+                    paired_preview.add(key)
         planned = {key for key, current in current_values.items() if current == entries[key]['target']}
         if write.frontend == 'desktop' and planned:
             write.step(1, 'Debloat restoration preview')
         else:
             write.heading('Debloat restoration preview')
-        states = {'on': tr('On'), 'off': tr('Off')}
+        states = {'on': tr('On'), True: tr('On'), 'off': tr('Off'), False: tr('Off')}
         for key, current in current_values.items():
             label = tr(SETTING_NAMES[key])
             if key in planned:
@@ -217,19 +257,25 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
                     tv = stack.enter_context(SSAP(profile['host'], path.parent, write, settings_write=True))
                 except Exception:
                     pairing_failed = True
-            current = read_current(remote, category, key, tv)
+            paired_value = read_ssap(tv, category, key) if key in LOG_UPLOADS else None
+            if paired_value is not None or (key in LOG_UPLOADS and key in paired_preview):
+                current = paired_value
+            elif key in LOG_UPLOADS:
+                current = read(remote, category, key)
+            else:
+                current = read_current(remote, category, key, tv)
             if current == original:
                 status = 'restore-already'
             elif current is None:
                 status = 'restore-unavailable'
             elif current == target and (remote.root or tv is not None):
-                try:
-                    reply = set_value(remote, tv, category, key, original)
-                except Exception:
-                    reply = None
+                reply = set_value(remote, tv, category, key, original)
                 if isinstance(reply, dict) and reply.get('returnValue') is True:
-                    actual = verify_value(remote, tv, category, key, original, current)
+                    actual = verify_value(remote, tv, category, key, original, current,
+                                          paired_upload=paired_value is not None)
                     status = 'restored' if actual == original else 'restore-unverified'
+                elif isinstance(reply, dict) and reply.get('returnValue') is False:
+                    status = 'restore-rejected'
                 else:
                     status = 'restore-failed'
             else:
@@ -238,6 +284,7 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
             if status in ('restore-already', 'restored'):
                 del remaining[key]
             write(f'{tr(SETTING_NAMES[key])} — {tr(RESTORE_RESULTS[status][2])}')
+            report_guide(write, key, status)
 
     if remaining == entries:
         return maintenance
@@ -256,6 +303,8 @@ def remember(path, key, original, target):
         journal = {'schema': 1, 'settings': {}}
     if journal['schema'] != 1 or not isinstance(journal['settings'], dict):
         raise ValueError('Invalid Debloat record')
+    if key in journal['settings'] and not valid_record(key, journal['settings'][key]):
+        raise ValueError('Invalid Debloat setting record')
     if key not in journal['settings']:
         journal['settings'][key] = {'original': original, 'target': target}
         private_write(path, json.dumps(journal).encode())
@@ -279,10 +328,10 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 continue
             progress(label)
             original = read(remote, category, key)
-            if original is None and key == 'promotionStreamer':
+            if original is None and (key == 'promotionStreamer' or (remote.root and key in LOG_UPLOADS)):
                 results[key] = events[key] = 'unavailable'
                 continue
-            if original == target:
+            if original == target and (remote.root or key not in LOG_UPLOADS):
                 results[key] = events[key] = 'already'
                 continue
             results[key] = 'failed'
@@ -295,8 +344,15 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
             if pairing_failure:
                 events[key] = pairing_failure
                 continue
-            if original is None and use_ssap:
-                original = read_ssap(tv, category, key)
+            paired_upload = False
+            if use_ssap and (original is None or key in LOG_UPLOADS):
+                paired_value = read_ssap(tv, category, key)
+                if paired_value is not None:
+                    original = paired_value
+                    paired_upload = key in LOG_UPLOADS
+                if original is None and key in LOG_UPLOADS:
+                    results[key] = events[key] = 'unavailable'
+                    continue
                 if original == target:
                     results[key] = events[key] = 'already'
                     continue
@@ -306,23 +362,70 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 except Exception:
                     events[key] = 'journal-failed'
                     continue
-            try:
-                reply = set_value(remote, tv, category, key, target)
-            except TVRejected:
-                events[key] = 'write-rejected'
-                continue
-            except Exception as exc:
-                rejected = isinstance(exc, UserError) and exc.reason_code == 'ssap-request-rejected'
-                events[key] = 'write-rejected' if rejected else 'write-unavailable'
-                continue
+            reply = set_value(remote, tv, category, key, target)
             if not isinstance(reply, dict) or reply.get('returnValue') is not True:
                 rejected = isinstance(reply, dict) and reply.get('returnValue') is False
                 events[key] = 'write-rejected' if rejected else 'write-unavailable'
                 continue
-            actual = verify_value(remote, tv, category, key, target, original)
+            actual = verify_value(remote, tv, category, key, target, original, paired_upload=paired_upload)
             results[key] = 'verified' if actual == target else 'unverified' if actual is None else 'failed'
             events[key] = 'verified' if actual == target else 'verify-unavailable' if actual is None else 'verify-mismatch'
     return results
+
+
+BLOCKING_TITLE = 'Ad and tracking domain blocking'
+BLOCKING_STATES = {
+    'off': 'Off', 'on': 'On', 'pending': 'Saved, currently inactive',
+    'partial': 'Incomplete mount', 'external': 'Another hosts mount is present',
+    'displaced': 'Saved, currently inactive',
+}
+
+
+def offer_domain_blocking(installer, ask, write):
+    from .package import ROOT_APP
+    if installer.profile.get('edition') != 'root' or not installer.remote.root:
+        return False
+
+    def request(action):
+        method = 'status' if action == 'status' else 'enable'
+        try:
+            reply = installer.remote.luna(ROOT_APP + '.service/' + method,
+                {'domainBlocking':action}, app_id=ROOT_APP, timeout=25)
+            if reply.get('returnValue') is True and reply.get('root') is True:
+                result = reply.get('result')
+                if isinstance(result, dict) and result.get('returnValue') is True:
+                    state = result.get('result')
+                    if isinstance(state, str) and state in BLOCKING_STATES:
+                        return state
+        except Exception:
+            pass
+        return None
+
+    state = request('status')
+    if state is None:
+        write(tr(BLOCKING_TITLE) + ' — ' + tr('Setting unavailable on this connection. Skipped.'))
+        return False
+    write.heading(BLOCKING_TITLE)
+    if state == 'external':
+        write(BLOCKING_STATES[state])
+        # No owner action can safely change this mount.
+        return False
+    write.option(0, 'Adjust LG settings (Debloat)', BLOCKING_STATES[state])
+    actions = ('off',) if state == 'displaced' else ('on', 'off')
+    for index, action in enumerate(actions, 1):
+        write.option(index, BLOCKING_STATES[action])
+    choice = prompts.number(ask, write, BLOCKING_TITLE + ' [0]: ', 0, len(actions), default=0)
+    if not choice:
+        return False
+    requested = actions[choice - 1]
+    if state != requested:
+        request(requested)
+        state = request('status')  # A lost reply is reconciled by reading, never by retrying the write.
+    label = BLOCKING_STATES.get(state, 'Could not read the current value')
+    write(tr(BLOCKING_TITLE) + ' — ' + tr(label))
+    if state != requested and (requested, state) != ('off', 'external'):
+        write('Could not change the setting')
+    return True
 
 
 def run(installer, ask, write, *, diagnostic=None, maintenance=False):
@@ -334,6 +437,8 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
             if events and write.frontend == 'desktop':
                 write.debloat_results(events)
                 prompts.answer(ask, REVIEW)
+            return
+        if offer_domain_blocking(installer, ask, write):
             return
     else:
         write.step(5, TITLE)
@@ -382,13 +487,12 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     except (OSError, ValueError):
         write.error('Could not apply Debloat settings.')
         return
-    if not installer.remote.root:
-        # The factory SSAP allowlist on this model and firmware excludes all Debloat keys (#610).
-        known_firmware_block = (installer.tv_info.get('modelName') == '55UK7500PSA'
-                                and installer.tv_info.get('firmwareVersion') == '05.50.70')
-        for key in results:
-            if events[key] == 'write-rejected':
-                results[key] = 'firmware-blocked' if known_firmware_block else 'write-rejected'
+    # The factory SSAP allowlist on this model and firmware excludes all Debloat keys (#610).
+    known_firmware_block = (not installer.remote.root and installer.tv_info.get('modelName') == '55UK7500PSA'
+                            and installer.tv_info.get('firmwareVersion') == '05.50.70')
+    for key in results:
+        if events.get(key) == 'write-rejected':
+            results[key] = 'firmware-blocked' if known_firmware_block else 'write-rejected'
     if write.frontend == 'desktop':
         write.debloat_results(results)
         prompts.answer(ask, REVIEW)
@@ -397,6 +501,7 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
         for key, status in results.items():
             icon = RESULTS[status][0]
             write(f'{icon} {tr(SETTINGS[key][1])} — {result_message(key, status)}')
+            report_guide(write, key, status)
         if write.frontend == 'android':
             write.option('1', CONTINUE)
         if not maintenance:

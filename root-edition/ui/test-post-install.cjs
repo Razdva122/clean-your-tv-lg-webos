@@ -20,7 +20,11 @@ const { chromium } = require('playwright');
       );
       await page.goto('http://cytv.test/');
       await page.evaluate(() => {
-        window.HomeI18n = { ready: (fn) => fn(), t: (key) => key };
+        window.HomeI18n = {
+          ready: (fn) => fn(),
+          t: (key) => key,
+          language: () => 'ru'
+        };
         window.PalmSystem = {
           launchParams: { cytvPostInstall: 'a'.repeat(32) }
         };
@@ -45,16 +49,46 @@ const { chromium } = require('playwright');
               this.onservicecallback('{"returnValue":true}');
               return;
             }
+            if (
+              window.rejectSetting &&
+              / debloat --settings /.test(JSON.parse(raw).command)
+            ) {
+              this.onservicecallback(
+                JSON.stringify({
+                  returnValue: true,
+                  stdoutString: JSON.stringify({
+                    state: 'debloat',
+                    results: { homePromotion: 'write-rejected' },
+                    settings: {
+                      homePromotion: {
+                        value: 'on',
+                        saved: true,
+                        guide: 'home-promotions'
+                      }
+                    }
+                  })
+                })
+              );
+              return;
+            }
             const result = / debloat-status$/.test(JSON.parse(raw).command)
               ? {
                   settings: {
                     homePromotion: { value: 'on', saved: false },
-                    livePlus: { value: null, saved: false }
+                    livePlus: { value: null, saved: false },
+                    dbgLogUpload: { value: true, saved: false },
+                    faultLogUpload: { value: false, saved: false }
                   }
                 }
               : {
-                  results: { homePromotion: 'verified' },
-                  settings: { homePromotion: { value: 'off', saved: true } }
+                  results: {
+                    homePromotion: 'verified',
+                    dbgLogUpload: 'verified'
+                  },
+                  settings: {
+                    homePromotion: { value: 'off', saved: true },
+                    dbgLogUpload: { value: false, saved: true }
+                  }
                 };
             this.onservicecallback(
               JSON.stringify({
@@ -100,19 +134,62 @@ const { chromium } = require('playwright');
       await page
         .getByRole('checkbox', { name: 'Turn off sponsored tiles' })
         .click();
+      const debug = page.getByRole('checkbox', {
+        name: 'Turn off debug log uploads to LG'
+      });
+      const fault = page.getByRole('checkbox', {
+        name: 'Turn off fault log uploads to LG'
+      });
+      assert.equal(await debug.isChecked(), false);
+      assert.equal(await fault.isChecked(), false);
+      assert.equal(
+        await debug.locator('..').getByText('On', { exact: true }).count(),
+        1
+      );
+      assert.equal(
+        await fault.locator('..').getByText('Off', { exact: true }).count(),
+        1
+      );
+      await debug.click();
       await apply.click();
       await page
         .getByText('Successfully applied and verified', { exact: true })
+        .first()
         .waitFor();
       const last = await page.evaluate(
         () => window.commands[window.commands.length - 1]
       );
       assert.equal(last.uri, 'luna://org.webosbrew.hbchannel.service/exec');
-      assert.match(last.raw.command, / debloat --settings homePromotion$/);
+      assert.match(
+        last.raw.command,
+        / debloat --settings homePromotion,dbgLogUpload$/
+      );
       await page.keyboard.press('Escape');
       assert.deepEqual(await page.evaluate(() => window.commands.at(-1)), {
         uri: 'luna://com.webos.applicationManager/launch',
         raw: { id: 'com.cleanyourtv.root.preview' }
+      });
+      const manual = page.getByRole('button', { name: 'Open privacy guide' });
+      assert.equal(await manual.count(), 0);
+      await page.evaluate(() => {
+        window.rejectSetting = true;
+        window.RootPostInstall.openDebloat();
+      });
+      await page
+        .getByRole('checkbox', { name: 'Turn off sponsored tiles' })
+        .click();
+      await apply.click();
+      await manual.focus();
+      await page.keyboard.press('Enter');
+      assert.deepEqual(await page.evaluate(() => window.commands.at(-1)), {
+        uri: 'luna://com.webos.applicationManager/launch',
+        raw: {
+          id: 'com.webos.app.browser',
+          params: {
+            target:
+              'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/PRIVACY.ru.md#home-promotions'
+          }
+        }
       });
       await page.evaluate(() => {
         window.CYTVDebloatPage = false;

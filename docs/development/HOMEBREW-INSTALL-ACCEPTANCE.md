@@ -1,5 +1,7 @@
 # Homebrew Installer candidate acceptance
 
+The [Installer 0.1.0 C3 session](../history/2026-11-28-homebrew-installer-0.1.0.md) records the verified package update, blocked Root review and remaining device cases.
+
 The candidate package ID is `io.github.razdva122.cytvinstaller`. The October
 and November device observations below used the earlier draft ID
 `com.cleanyourtv.installer`. Their exact artifacts, hashes and outcomes remain

@@ -379,8 +379,11 @@ def require_generic_environment(chain=None, *, removed_apps=None, embedded_targe
             or type(missing.get('errorCode')) is not int or missing['errorCode']!=-1
             or missing.get('errorText')!='Service does not exist: com.webos.service.systemprofile.'):
         raise ValueError('System Profile absence was not confirmed')
-    if any(os.path.lexists(p) for p in OTHER_HOME_STATE):
-        raise ValueError('Another Home integration is present; preserve its state')
+    conflicts = [str(path) for path in OTHER_HOME_STATE if os.path.lexists(path)]
+    if conflicts:
+        error = ValueError('Another Home integration is present; preserve its state')
+        error.home_conflict_paths = conflicts
+        raise error
     if os.path.lexists(INPUT_BINDINGS):
         bindings=json.loads(secure(INPUT_BINDINGS,limit=65536))
         if not isinstance(bindings,dict) or '773' in bindings:

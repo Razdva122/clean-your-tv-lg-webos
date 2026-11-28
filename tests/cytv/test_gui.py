@@ -430,7 +430,9 @@ class GuiTests(unittest.TestCase):
         self.assertLess(scroll.viewport().grab().toImage().pixelColor(1, 1).lightness(), 100)
         toggles = w.form.findChildren(ToggleSwitch)
         self.assertIsNone(w.form.findChild(ToggleSwitch, 'debloat-preloadNetflix'))
-        self.assertTrue(all(toggle.isChecked() for toggle in toggles))
+        self.assertEqual({toggle.objectName() for toggle in toggles if not toggle.isChecked()},
+                         {'debloatGroup-livePlus', 'debloat-dbgLogUpload', 'debloat-faultLogUpload'})
+        w.form.findChild(ToggleSwitch, 'debloat-dbgLogUpload').click()
         self.assertTrue(w.form.findChild(ToggleSwitch, 'debloat-promotionStreamer').isChecked())
         section = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
         section.click()
@@ -442,10 +444,24 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(section.accessibleDescription(), 'Some selected')
         next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
         self.assertEqual(json.loads(w.channel.answers.get_nowait()),
-                         [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
+                         [key for key in debloat.SETTINGS if key not in ('contentRecommendation', 'faultLogUpload')])
         w.receive('debloat-results', {'homePromotion': 'unverified', 'contentRecommendation': 'write-rejected', 'aiNudge': 'firmware-blocked'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertFalse(w.reading.isHidden())
+        from PySide6.QtCore import QUrl
+        guide = debloat.privacy_guide('aiNudge', 'firmware-blocked')
+        self.assertEqual(w.content.toPlainText().count('Open privacy guide'), 2)
+        self.assertIn('href="' + guide + '"', w.content.toHtml())
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=True) as opened:
+            w.content.anchorClicked.emit(QUrl(guide))
+            w.content.anchorClicked.emit(QUrl('https://example.invalid/other'))
+            opened.assert_called_once_with(QUrl(guide))
+        w.receive('debloat-guide', ('lmt', 'restore-rejected'))
+        restore_guide = debloat.privacy_guide('lmt', 'restore-rejected')
+        self.assertIn('href="' + restore_guide + '"', w.details.toHtml())
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=True) as opened:
+            w.details.anchorClicked.emit(QUrl(restore_guide))
+            opened.assert_called_once_with(QUrl(restore_guide))
         self.assertIn('Home Settings → Content Recommendation', w.content.toPlainText())
         self.assertNotIn('Home Settings → Home Promotion', w.content.toPlainText())
         self.assertIn('The result could not be verified.', w.content.toPlainText())
@@ -1118,6 +1134,29 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(json.loads(record.read_text())['settings'], {'livePlus': entry})
         self.assertEqual(json.loads(w.report.read_text())['debloat'], {'sportsAlarm': 'restored'})
 
+    def test_debloat_shows_verified_domain_blocking_result(self):
+        from unittest.mock import Mock
+        from cytv import cli, debloat, state
+
+        store = state.Store(self.directory.name)
+        profile = state.target('192.0.2.10', 'root')
+        store.save(profile)
+        remote = Mock(root=True)
+        remote.luna.side_effect = [{'returnValue':False}] + [
+            {'root':True, 'returnValue':True, 'result':{'returnValue':True, 'result':value}}
+            for value in ('off', 'on', 'on')]
+        w = Wizard(run=lambda argv, **kwargs: cli.main(argv, connect=lambda *_:remote, **kwargs))
+        self.addCleanup(w.close)
+        w.start('debloat', profile)
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.title, debloat.BLOCKING_TITLE)
+        combo = w.form.findChild(QComboBox)
+        self.assertIn('Off', combo.currentText())
+        combo.setCurrentIndex(combo.findText('On'))
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.pump(lambda: not w.running)
+        self.assertIn(debloat.BLOCKING_TITLE + ' — On', w.content.toPlainText())
+
     def test_debloat_maintenance_uses_setup_selection_and_saves_report(self):
         from unittest.mock import Mock
         from cytv import cli, debloat, state
@@ -1129,6 +1168,7 @@ class GuiTests(unittest.TestCase):
         remote = Mock(root=True)
         remote.luna.side_effect = [
             {'returnValue': False},
+            {'returnValue': False},  # Legacy service has no domain-blocking control.
             {'returnValue': True, 'settings': {'homePromotion': 'on'}},
             {'returnValue': True},
             {'returnValue': True, 'settings': {'homePromotion': 'off'}},

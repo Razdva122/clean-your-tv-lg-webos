@@ -201,6 +201,10 @@ def runtime_restore(payload, uid=0, *, activation_token=None, routing_only=False
                 restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
     else:
         restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
+    domain_state = Path('/var/lib/clean-your-tv-root')
+    if (activation_token is None and restored in ('restored', 'absent')
+            and os.path.lexists(domain_state/'domain-blocking.hosts')):
+        cli.domain_blocking('off', domain_state, required=True)
     result={'returnValue':True,'result':restored}
     if selection_raw is not None and result['result']=='restored':
         if safe_bytes(backend.STATE/'home-backend.json',uid=uid)!=selection_raw:
@@ -651,6 +655,8 @@ def compact_audit(record, store):
             result['stage']=value['stage']
         if value.get('package_rejected') is True:
             result['package_rejected']=True
+        from installation import home_conflict_details
+        result.update(home_conflict_details(value.get('home_conflict_paths')))
         step=value.get('cleanup_step')
         if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
                     'legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'):

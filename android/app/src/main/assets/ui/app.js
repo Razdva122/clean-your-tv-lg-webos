@@ -147,11 +147,25 @@ function guideImage(name) {
 function connection() {
   return `${step()}<section class="page-intro"><h1>${action === 'install' ? t('connectTitle') : operationTitle()}</h1><p>${action === 'install' ? t('connectDesc') : t('toolsConnect')}</p><span class="edition-tag">${icon(edition === 'root' ? 'root' : 'shield')}${editionName()}</span></section>${removalConnection ? recoveryDetails() : ''}<form id="connection" novalidate><div class="fields"><label class="field"><span>${t('ip')}</span><input id="host" name="host" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.50" value="${esc(host)}" ${removalConnection ? 'readonly' : ''} aria-describedby="host-error" aria-invalid="false"><p id="host-error" class="error" hidden></p></label><label class="field port"><span>${t('port')}</span><input id="port" name="port" type="text" inputmode="numeric" value="${esc(port)}" ${removalConnection ? 'readonly' : ''} aria-describedby="port-error"><p id="port-error" class="error" hidden></p></label></div><p class="field-help">${t('ipHelp')}</p>${edition === 'no-root' && selectedConnection !== 'root-ssh' ? `<div class="requirements"><div class="requirements-title">${icon('tv')}${t('prepare')}</div><p class="notice">${t('homeHelperHelp')}</p><div class="requirement"><span class="number">1</span><div><strong>Developer Mode</strong><p>${t('devInstall')}</p></div></div><div class="requirement"><span class="number">2</span><div><strong>LG Developer</strong><p>${t('devAccount')}</p>${guideImage('sign-in')}</div></div><div class="requirement"><span class="number">3</span><div><strong>Dev Mode Status</strong><p>${t('devDesc')}</p>${guideImage('dev-mode')}</div></div><div class="requirement"><span class="number">4</span><div><strong>Key Server</strong><p>${t('keyServerDesc')}</p>${guideImage('key-server')}</div></div></div><p class="notice">${t('sessionHelp')}</p>` : `<div class="root-notice">${t('rootNotice')}</div><div class="segment" role="group" aria-label="SSH"><button type="button" data-action="auth" data-auth="password" aria-pressed="${auth === 'password'}">${t('password')}</button><button type="button" data-action="auth" data-auth="key" aria-pressed="${auth === 'key'}">${t('sshKey')}</button></div>${auth === 'key' ? `<button type="button" class="key-button" data-action="import-key">${icon(keyReady ? 'check' : 'file')}<span>${t(keyReady ? 'keyImported' : 'importKey')}</span></button><p class="error" id="key-error" hidden>${t('keyError')}</p><p class="notice">${t('keyPrivate')}</p>` : `<p class="notice">${t('rootHint')}</p>`}`}<div class="network-tip">${icon('wifi')}<span>${t('wifiTip')}</span></div>${action === 'install' ? `<p class="notice">${t('pairingHelp')}</p>` : ''}</form><footer class="bottom">${primary(action === 'install' ? 'install' : action === 'restore' ? 'restore' : action === 'uninstall' ? 'uninstall' : 'check', 'start')}<div class="footnote">${icon('shield')}${t(action === 'install' ? 'reviewFoot' : 'progressFoot')}</div></footer>`;
 }
+function resultText(text) {
+  // Log and prompt text may include device output. Link only our exact guide URLs.
+  return String(text)
+    .split('\n')
+    .map((line) => {
+      const url = line.trim();
+      return /^https:\/\/github\.com\/Razdva122\/clean-your-tv-lg-webos\/blob\/release\/next\/docs\/PRIVACY(?:\.ru)?\.md#[a-z-]+$/.test(
+        url
+      )
+        ? `<a href="${esc(url)}">${esc(t('privacyGuide'))}</a>`
+        : esc(line);
+    })
+    .join('\n');
+}
 function logMarkup() {
   return logs
     .map(
       (line) =>
-        `<span${errorLogs.has(line) ? ' class="error-text"' : ''}>${esc(line)}</span>`
+        `<span${errorLogs.has(line) ? ' class="error-text"' : ''}>${resultText(line)}</span>`
     )
     .join('\n');
 }
@@ -530,7 +544,7 @@ function showPrompt(event) {
   } else if (event.kind === 'text') {
     content = `<h2 id="prompt-title">${esc(event.text)}</h2><p id="name-hint">${esc(event.hint)}</p>${event.error ? `<p class="error-summary" id="name-error" role="alert">${esc(event.error)}</p>` : ''}<input class="prompt-input" id="prompt-value" type="text" aria-labelledby="prompt-title" aria-describedby="name-hint${event.error ? ' name-error' : ''}"${event.error ? ' aria-invalid="true"' : ''}><div class="dialog-actions">${primary('continue', 'text-prompt', 'check')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   } else if (Array.isArray(event.options) && event.options.length) {
-    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${event.options.map((option) => `<button class="${option.value === event.defaultChoice ? 'primary' : 'secondary'}" data-action="choice-prompt" data-value="${esc(option.value)}">${esc(option.label)}${option.detail ? `<span>${esc(option.detail)}</span>` : ''}</button>`).join('')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
+    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><div class="context" tabindex="0">${resultText(event.context || event.text)}</div><div class="dialog-actions">${event.options.map((option) => `<button class="${option.value === event.defaultChoice ? 'primary' : 'secondary'}" data-action="choice-prompt" data-value="${esc(option.value)}">${esc(option.label)}${option.detail ? `<span>${esc(option.detail)}</span>` : ''}</button>`).join('')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   } else {
     const storageRetry =
       event.reason === 'storage-preflight-failed' &&
@@ -540,7 +554,7 @@ function showPrompt(event) {
     const confirm = storageRetry
       ? `<button class="primary" data-action="confirm">${esc(event.confirmLabel)}${icon('refresh')}</button>`
       : primary('continue', 'confirm', 'check');
-    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><p>${t('reviewDesc')}</p><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${confirm}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
+    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><p>${t('reviewDesc')}</p><div class="context" tabindex="0">${resultText(event.context || event.text)}</div><div class="dialog-actions">${confirm}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   }
   dialog.innerHTML = content;
   if (!dialog.open) dialog.showModal();

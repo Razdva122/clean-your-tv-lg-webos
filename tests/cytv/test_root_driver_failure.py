@@ -15,7 +15,8 @@ from cytv.transport import SSH
 ROOT=Path(__file__).resolve().parents[2]
 ATTEMPT='b'*32
 DETAIL={'schema':1,'attempt':ATTEMPT,'exception_type':'PermissionError','errno':13,
-        'frames':[{'file':'deploy.py','line':378}]}
+        'frames':[{'file':'deploy.py','line':378}],
+        'home_conflict_paths': ['/media/developer/cleanyourtv', '/var/lib/luma-home']}
 
 
 class DriverFailureTests(unittest.TestCase):
@@ -58,13 +59,13 @@ with patch.object(deploy,'require_device',side_effect=PermissionError(13,'PRIVAT
         self.assertNotIn('PRIVATE',json.dumps(report))
         self.assertNotIn(ATTEMPT,json.dumps(report))
 
-    def failure(self, raw):
+    def failure(self, raw, **options):
         remote=SSH.__new__(SSH);channel=Mock();remote.channel=lambda _:channel
         def chunks(channel, timeout):
             for offset in range(0,len(raw),17):yield raw[offset:offset+17]
             raise TVCommandError(1)
         remote.chunks=chunks
-        with self.assertRaises(TVCommandError) as caught:remote.run('fixed driver command')
+        with self.assertRaises(TVCommandError) as caught:remote.run('fixed driver command', **options)
         self.assertTrue(channel.close.called)
         return caught.exception
 
@@ -73,6 +74,22 @@ with patch.object(deploy,'require_device',side_effect=PermissionError(13,'PRIVAT
             'root_install_failure':dict(DETAIL,frames=[*DETAIL['frames'],{'file':'PRIVATE','line':1}],private='PRIVATE')}).encode())
         self.assertEqual(error._root_driver_failure,DETAIL)
         self.assertNotIn('PRIVATE',str(vars(error)))
+
+    def test_cleanup_tail_failure_is_bound_and_exports_only_known_paths(self):
+        from cytv.errors import HOME_CONFLICT_PATHS
+        paths = list(HOME_CONFLICT_PATHS)
+        operation, removal = 'a' * 32, 'd' * 32
+        reply = dict(operation=operation, removal=removal, state='recovery_required', stage='private-cleanup',
+                     current=False, cleanup_error='route-changed', home_conflict_paths=paths)
+        for changes, expected in [({}, paths), ({'operation': 'f' * 32}, None),
+                                  ({'removal': 'b' * 32}, None), ({'cleanup_error': 'other'}, None),
+                                  ({'home_conflict_paths': ['/PRIVATE']}, None),
+                                  ({'home_conflict_paths': [paths[0], {}]}, None)]:
+            with self.subTest(changes=changes):
+                raw = json.dumps(dict(reply, **changes)).encode()
+                error = self.failure(raw, cleanup_tail=(operation, removal))
+                self.assertEqual(getattr(error, 'home_conflict_paths', None), expected)
+                self.assertFalse(hasattr(self.failure(raw), 'home_conflict_paths'))
 
     def test_unknown_malformed_and_oversized_failures_stay_generic(self):
         for raw in (b'PRIVATE',b'\xff',b'x'*4097,json.dumps({'returnValue':True,'root_install_failure':DETAIL}).encode(),

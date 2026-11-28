@@ -213,9 +213,15 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 
 Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
 
+Jeśli telewizor odrzuci zmianę, sprawdź [jak ustawić prywatność pilotem w Twoim modelu (po angielsku)](../PRIVACY.md).
+
 W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udostępnia to ustawienie.
 
+W grupie Prywatność możesz osobno wyłączyć wysyłanie dzienników debugowania i dzienników awarii do LG. Ustawienie jest pomijane, jeśli nie można odczytać jego pierwotnej wartości. W trybie No-root oprogramowanie telewizora może odrzucić zmianę. Niektóre telewizory ponownie włączają wysyłanie dzienników debugowania przy starcie. Sprawdź ustawienie po ponownym uruchomieniu.
+
 Aby cofnąć jedną zmianę, otwórz Debloat w menu konserwacji, korzystając z tego samego zapisanego połączenia z telewizorem. Wybierz ustawienie, sprawdź pierwotną wartość i potwierdź. Na obsługiwanych modelach możesz wyłączyć automatyczne uruchamianie LG Channels w menu Wszystkie ustawienia → Ogólne → Kanały → Automatyczne uruchamianie LG Channels.
+
+W wydaniu Root otwórz Konserwacja → Debloat → Blokowanie domen reklamowych i śledzących. Włącz tę opcję, aby blokować wybrane domeny na tym telewizorze. Wyłącz ją, aby przywrócić oryginalny plik hosts. Aplikacje nadal mogą wyświetlać reklamy. Sprawdź ustawienie po aktualizacji Root.
 
 Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.
 

@@ -516,7 +516,9 @@ is uncertain. Do not remove journals or archives to force setup. A failed readin
 transaction must be recovered first; replacement does not bypass it. Verify the
 new System Updater version and actual Home/controls after completion.
 
-## Repair an interrupted Root 0.22.0 recovery service
+<a id="repair-an-interrupted-root-0220-recovery-service"></a>
+
+## Repair an interrupted Root recovery service
 
 Use a console installer that includes the following command with the same saved
 Root connection and data directory as the original setup.
@@ -532,6 +534,13 @@ the original on-TV provisioning records. It keeps the installed package and
 verifies the repaired service before offering to finish setup and enable Home
 control in a separate confirmation. If verification fails, keep the original
 recovery data and save the diagnostic report.
+
+For a retained compositor Root 0.23.0 install recorded as a native product
+operation, the same command verifies the original operation and resumes recovery
+provisioning in place. It completes the original product reservation only after
+verifying the installed files, the recovery service and stock Home. This path
+finishes with LG Home in control. The saved connection and device recovery
+records remain available.
 
 ## Repair an interrupted Root Beta setup
 

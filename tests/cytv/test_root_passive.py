@@ -85,14 +85,16 @@ process.stdout.write(JSON.stringify(output));
                  'stage':'root-deploy','terminal':False}
         self.request.update(lease=lease['id'], home_changed=False, failure={
             'exception_type':'CalledProcessError','exit_status':1,'message':'PRIVATE',
-            'root_driver':{'exception_type':'TimeoutError','frames':[{'file':'c1_keyfilter.py','line':17},
+            'root_driver':{'exception_type':'ValueError','home_conflict_paths':['/var/lib/luma-home'],
+                           'frames':[{'file':'c1_keyfilter.py','line':17},
                                                                    {'file':'PRIVATE','line':5}]}})
         self.write(self.base+'/request-'+self.identifier+'.json',json.dumps(self.request).encode())
         self.write(self.base+'/operation.json',json.dumps(lease).encode())
         self.assertEqual(self.collect(pending=pending),{
             'schema':1,'status':'read','operation':'consistent-not-admission','worker':'not-applicable',
             'stage':'root-deploy','failure':{'exception_type':'CalledProcessError','exit_status':1,
-            'root_driver':{'exception_type':'TimeoutError','frames':[{'file':'c1_keyfilter.py','line':17}]}}})
+            'root_driver':{'exception_type':'ValueError','home_conflict_paths':['/var/lib/luma-home'],
+                           'frames':[{'file':'c1_keyfilter.py','line':17}]}}})
         self.assertEqual(self.collect(foreign=True,pending=pending)['status'],'unsafe')
         lease['id']='c'*32
         self.write(self.base+'/operation.json',json.dumps(lease).encode())

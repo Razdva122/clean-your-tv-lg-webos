@@ -212,9 +212,15 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 
 Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
+Si le téléviseur refuse un réglage, consultez le [guide de confidentialité à la télécommande pour votre modèle (en anglais)](../PRIVACY.md).
+
 Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage.
 
+Dans Confidentialité, vous pouvez désactiver séparément l’envoi des journaux de débogage et des journaux d’erreurs à LG. Si la valeur initiale est illisible, le réglage est ignoré. En mode No-root, le micrologiciel peut refuser le changement. Certains téléviseurs réactivent l’envoi des journaux de débogage au démarrage. Vérifiez le réglage après avoir redémarré.
+
 Pour annuler une seule modification, ouvrez Debloat dans Maintenance avec la même connexion enregistrée au téléviseur. Choisissez le réglage, vérifiez sa valeur d’origine et confirmez. Sur les modèles compatibles, désactivez le démarrage automatique de LG Channels dans Tous les paramètres → Général → Chaînes → Démarrage automatique de LG Channels.
+
+Dans l’édition Root, ouvrez Maintenance → Debloat → Blocage des domaines de publicité et de suivi. Activez cette option pour bloquer certains domaines sur ce téléviseur. Désactivez-la pour restaurer le fichier hosts d’origine. Certaines applications peuvent encore afficher des publicités. Vérifiez ce réglage après une mise à jour de Root.
 
 Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enregistrées par Debloat. Si vous ignorez la restauration, la désinstallation se poursuit sans modifier ces réglages.
 

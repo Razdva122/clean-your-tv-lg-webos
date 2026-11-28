@@ -394,6 +394,16 @@
     session.mediaState = state;
     if (embedded) {
       root.parent.postMessage('cytv-screensaver-rendered', '*');
+      if (!session.timer)
+        session.timer = root.setInterval(function () {
+          if (
+            !finished &&
+            owner === session &&
+            !doc.hidden &&
+            session.mediaState !== 'loading'
+          )
+            root.parent.postMessage('cytv-screensaver-alive', '*');
+        }, 1000);
       return;
     }
     if (state !== 'ready' || doc.hasFocus()) heartbeat(session);

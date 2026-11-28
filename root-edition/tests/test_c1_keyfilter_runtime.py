@@ -210,6 +210,25 @@ class RuntimeTests(unittest.TestCase):
     def generic(self):
         return dict(self.admission,model='55NANO77SRA',firmware='23.25.55',webos='9.2.2')
 
+    def test_home_conflict_reports_every_matching_path(self):
+        paths = self.k.OTHER_HOME_STATE
+        absent_service = {'returnValue': False, 'errorCode': -1,
+                          'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        import itertools
+        for count in range(1, len(paths) + 1):
+            for present in itertools.combinations(paths, count):
+                with self.subTest(present=present), patch.object(self.k, 'luna', return_value=absent_service), \
+                        patch.object(os.path, 'lexists', side_effect=present.__contains__), \
+                        self.assertRaisesRegex(ValueError, 'Another Home integration') as caught:
+                    self.k.require_generic_environment()
+                import deploy
+                from install_driver import failure_summary, cleanup_probe_details
+                expected = list(map(str, present))
+                error = caught.exception
+                detail = deploy.install_failure(error, attempt='a' * 32)
+                self.assertEqual(deploy.install_failure_details(detail, 'a' * 32)['home_conflict_paths'], expected)
+                self.assertEqual(cleanup_probe_details(failure_summary(error))['home_conflict_paths'], expected)
+
     def test_generic_environment_refuses_takeover_and_requires_exact_absence(self):
         missing={'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'}
         vendor={'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}

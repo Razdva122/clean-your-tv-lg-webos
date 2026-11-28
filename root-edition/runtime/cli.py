@@ -376,6 +376,19 @@ def setup_enable(identifier):
 def main(mode, transaction=None):
     if os.geteuid() != 0:
         raise PermissionError('Root required')
+    if mode == 'retire-domain-blocking' and transaction is None:
+        # The component uninstaller already owns the product operation.
+        return domain_blocking('off', d.STATE, required=True)
+    if mode == 'domain-blocking':
+        from update_guard import control
+        if transaction not in ('status','on','off'):
+            raise ValueError('Invalid domain blocking action')
+        if transaction == 'status':
+            return domain_blocking('status', d.STATE)
+        with control(d.STATE, d.EXPECTED_UID):
+            if transaction == 'on' and os.path.lexists(d.FAILSAFE):
+                raise ValueError('Failsafe is active')
+            return domain_blocking(transaction, d.STATE)
     if mode in ('enable','setup-enable','intent-trial','confirm','trial','emergency-trial','boot'):
         from update_guard import control, ProductPending
         # Automatic recovery restores safely without cancelling the updater
@@ -385,7 +398,15 @@ def main(mode, transaction=None):
         try:
             with control(d.STATE,d.EXPECTED_UID):
                 if mode == 'setup-enable': return setup_enable(transaction)
-                return execute(mode,transaction)
+                result = execute(mode,transaction)
+                if mode == 'boot' and os.path.lexists(d.STATE/'domain-blocking.hosts'):
+                    try:
+                        from boot_gate import observation
+                        if observation() == (True, False):
+                            domain_blocking('boot', d.STATE)
+                    except (OSError, ValueError, subprocess.SubprocessError):
+                        pass  # Optional resolver changes never block Home recovery.
+                return result
         except ProductPending:
             if mode == 'boot': return _restore_home(cancel_resume=False)
             raise
@@ -419,6 +440,7 @@ def execute(mode, transaction=None):
             operation = {'suspend-update':suspend,'finish-update':finish,'abort-update':abort}[mode]
             result = operation(transaction,d.STATE,d.EXPECTED_UID)
         if mode == 'suspend-update':
+            domain_blocking('off', d.STATE, required=True)
             # Retained updaters call this current, verified runtime before
             # replacing Home/infrastructure, including rollback to old workers.
             if any(os.path.lexists(d.STATE/name) for name in ('weather-permissions.json','permissions/weather.api.json')):
@@ -857,6 +879,167 @@ def audio_entry(args):
         return audio_main(args[0] if len(args) == 1 and args[0] != 'worker' else '')
     except Exception:
         return dict(returnValue=False, errorCode='unavailable')
+
+
+# Keep the optional resolver control in the existing signed runtime inventory.
+BLOCKED_HOSTS = (
+    'ad.lgappstv.com', 'ad.lgsmartad.com', 'info.lgsmartad.net', 'lgads.tv',
+    'tracking.lgtvsdp.com', 'aic.api.adts.lgtvcommon.com',
+    'prov-lg.alphonso.tv', 'eulacheck.alphonso.tv',
+    'us.ad.lgsmartad.com', 'gb.ad.lgsmartad.com',
+    'de.ad.lgsmartad.com', 'pt.ad.lgsmartad.com', 'fi.info.lgsmartad.com',
+    'eu-acr34.alphonso.tv', 'eu-acr86.alphonso.tv',
+    'tkacr37.alphonso.tv', 'tkacr41.alphonso.tv',
+)
+
+
+class DomainBlocker:
+    marker = b'\n# Clean Your TV domain blocking v1\n'
+    checksum = b'# CYTV SHA256 '
+    limit = 1024 * 1024
+
+    def __init__(self, root, hosts=Path('/etc/hosts'), mountinfo=Path('/proc/self/mountinfo')):
+        self.root = root
+        self.table = root/'domain-blocking.hosts'
+        self.hosts = hosts
+        self.mountinfo = mountinfo
+
+    @staticmethod
+    def digest(data):
+        import hashlib
+        return hashlib.sha256(data).hexdigest().encode('ascii')
+
+    def read(self, path):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != d.EXPECTED_UID or
+                    info.st_nlink != 1 or info.st_mode & 0o022 or info.st_size > self.limit):
+                raise ValueError('Unsafe hosts file')
+            data = stream.read(self.limit + 1)
+            if len(data) > self.limit or b'\0' in data:
+                raise ValueError('Invalid hosts file')
+            return data
+
+    def generate(self, original):
+        if self.marker in original:
+            raise ValueError('An existing CYTV table is visible')
+        names = {name.encode('ascii') for name in BLOCKED_HOSTS}
+        for line in original.splitlines():
+            fields = line.partition(b'#')[0].lower().split()
+            if (fields and fields[0] not in (b'0.0.0.0', b'::', b'127.0.0.1', b'::1')
+                    and any(name.rstrip(b'.') in names for name in fields[1:])):
+                raise ValueError('Existing hosts mapping conflicts with blocklist')
+        rows = b''.join(address + b' ' + name.encode('ascii') + b'\n'
+                        for name in BLOCKED_HOSTS for address in (b'0.0.0.0', b'::'))
+        data = original + self.marker + rows
+        value = data + self.checksum + self.digest(data) + b'\n'
+        if len(value) > self.limit:
+            raise ValueError('Hosts file too large')
+        return value
+
+    def save(self, data):
+        fd, temp = tempfile.mkstemp(dir=self.root, prefix='.domain-blocking-')
+        try:
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(data)
+                stream.flush()
+                os.fchmod(stream.fileno(), 0o444)  # Resolver clients can read the mounted file.
+                os.fsync(stream.fileno())
+            os.replace(temp, self.table)
+            d.sync(self.root)
+        finally:
+            if os.path.lexists(temp):
+                os.unlink(temp)
+
+    def inspect(self):
+        # Multiple layers or a mount over our source cannot establish exclusive ownership.
+        # Production paths contain no spaces or mountinfo escape sequences.
+        mounts = []
+        for row in self.mountinfo.read_text().splitlines():
+            fields = row.split()
+            if len(fields) < 10 or '-' not in fields[6:]:
+                raise ValueError('Malformed mount table')
+            if fields[4] == str(self.table):
+                return 'external', None
+            if fields[4] == str(self.hosts):
+                mounts.append(fields)
+        saved = None
+        if os.path.lexists(self.table):
+            saved = self.read(self.table)
+            data, marker, check = saved.rpartition(self.checksum)
+            if not marker or self.marker not in data or check != self.digest(data) + b'\n':
+                raise ValueError('Generated hosts file changed')
+        if not mounts:
+            return ('pending' if saved is not None else 'off'), saved
+        if len(mounts) != 1 or saved is None:
+            return 'external', saved
+        if not self.table.samefile(self.hosts):
+            return 'displaced', saved
+        fields = mounts[0]
+        private = not any(item.startswith(('shared:', 'master:', 'propagate_from:'))
+                          for item in fields[6:fields.index('-')])
+        return ('on' if private and 'ro' in fields[5].split(',') else 'partial'), saved
+
+    @staticmethod
+    def mount(*args):
+        subprocess.run(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, check=True, timeout=5,
+                       env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL':'C'})
+
+    def apply(self, action):
+        if action not in ('status', 'on', 'off', 'boot'):
+            raise ValueError('Invalid blocking action')
+        d.trusted_dir(self.root)
+        d.trusted_dir(self.hosts.parent)
+        state, saved = self.inspect()
+        if action == 'status' or state == 'external':
+            return state
+        if state == 'displaced' and action != 'off':
+            return state
+        if action == 'off':
+            if state in ('on', 'partial'):
+                self.mount('umount', str(self.hosts))
+                if self.inspect()[0] != 'pending':
+                    raise ValueError('Hosts mount removal unverified')
+            if saved is not None:
+                self.table.unlink()
+                d.sync(self.root)
+            return 'external' if state == 'displaced' else 'off'
+        if state == 'on' or action == 'boot' and saved is None:
+            return state
+        if state != 'partial':
+            original = self.read(self.hosts)
+            if not self.hosts.stat().st_mode & stat.S_IROTH:
+                raise ValueError('A system-readable hosts file is required')
+            table = self.generate(original)
+            if saved != table:
+                self.save(table)
+            if self.inspect()[0] != 'pending' or self.read(self.hosts) != original:
+                raise ValueError('Hosts configuration changed')
+            self.mount('mount', '--bind', str(self.table), str(self.hosts))
+        for options in (('--make-private',), ('-o', 'remount,bind,ro')):
+            state = self.inspect()[0]
+            if state == 'on':
+                break
+            if state != 'partial':
+                raise ValueError('Hosts mount owner changed')
+            self.mount('mount', *options, str(self.hosts))
+        if self.inspect()[0] != 'on':
+            raise ValueError('Read-only hosts mount unverified')
+        return 'on'
+
+
+def domain_blocking(action, root, *, required=False):
+    # Boot and uninstall of an installation that never opted in are no-ops.
+    if action in ('off', 'boot') and not os.path.lexists(root/'domain-blocking.hosts'):
+        return 'off'
+    if not os.path.samefile('/proc/self/ns/mnt', '/proc/1/ns/mnt'):
+        raise ValueError('System mount namespace unavailable')
+    state = DomainBlocker(root).apply(action)
+    if required and os.path.lexists(root/'domain-blocking.hosts'):
+        raise ValueError('Another hosts mount is present; restart before removing domain blocking')
+    return state
 
 
 def runtime_failure(mode, error):
