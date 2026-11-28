@@ -561,7 +561,7 @@ def repair_root_recovery(pins, checkpoint=lambda stage: None):
     return repair_retained_recovery(checkpoint, pins=pins)
 
 
-def repair_retained_recovery(checkpoint, *, pins=None):
+def repair_retained_recovery(checkpoint, *, pins=None, native_product=False):
     from deploy import APP, verify_payload
     from package_identity import bootstrap_inventory
     from runtime import c1_keyfilter
@@ -571,9 +571,10 @@ def repair_retained_recovery(checkpoint, *, pins=None):
     if LEGACY_NODE_BETA != beta:
         raise ValueError('Wrong Root recovery support variant')
     release = json.loads(secure(STATE/'release.json')) if beta else verify_retained_support(pins)
+    version = '0.20.0' if beta else '0.23.0' if native_product else '0.22.0'
     if (release.get('application_id'), release.get('version'), release.get('runtime_variant'),
             release.get('home_backend'), release.get('routing'), release.get('compositor_admission')) != (
-            APP, '0.20.0' if beta else '0.22.0', 'node012-beta' if beta else None,
+            APP, version, 'node012-beta' if beta else None,
             'c1-native-gate', 'compositor-keyfilter-v1', 3):
         raise ValueError('Unsupported retained Root package')
     checkpoint('deployment-stage')
@@ -598,14 +599,30 @@ def repair_retained_recovery(checkpoint, *, pins=None):
     bootstrap_inventory(STATE)
     if not beta:
         verify_payload(release)
+    if native_product:
+        # Authenticate the historical runtime and its private service copy
+        # independently of the mutable recovery-provision manifest.
+        files = json.loads(secure(STATE/'bundle.json'))['files']
+        runtime = {str(path.relative_to(STATE)) for path in RUNTIME.glob('*.py')}
+        if runtime != {name for name in files if name.startswith('runtime/') and name.endswith('.py')}:
+            raise ValueError('Original Root runtime inventory changed')
+        runtime.update(('runtime/c1-keyfilter-guard', 'runtime/c1-home-filter.js'))
+        for name in runtime:
+            if sha(secure(STATE/name)) != files.get(name):
+                raise ValueError('Original Root runtime changed')
+        for name in PRIVATE_FILES:
+            expected = release['files'].get('usr/palm/services/'+NAME+'/'+name)
+            if sha(secure(PRIVATE_SERVICE/name)) != expected:
+                raise ValueError('Original private Root service changed')
     checkpoint('ls2-registration')
     verify_retained_repair_registration()
     checkpoint('runner')
-    if not beta and use_lg_local_activity():
+    if not beta and not native_product and use_lg_local_activity():
         raise ValueError('The original runner already used local request activities')
     expected_runner = runner_bytes(local_activity=True)
     old_runner = runner_bytes(local_activity=False)
-    if secure(RUNNER) not in (old_runner, expected_runner):
+    if (secure(RUNNER) not in (old_runner, expected_runner)
+            or native_product and stat.S_IMODE(RUNNER.stat().st_mode) != 0o700):
         raise ValueError('Retained Root runner changed')
     checkpoint('pending-proof')
     observed = manifest()
@@ -644,6 +661,19 @@ def repair_retained_recovery(checkpoint, *, pins=None):
             or not isinstance(runtime, dict) or runtime.get('returnValue') is not True
             or not isinstance(recovery, dict) or recovery.get('integrity_verified') is not True):
         raise ValueError('Repaired Root recovery status could not be verified')
+    if native_product:
+        checkpoint('stock-home')
+        effective, intent = result.get('effective'), result.get('intent')
+        if (result.get('backend') != 'c1-native-gate' or not isinstance(effective, dict)
+                or effective.get('routing') != 'compositor-keyfilter-v1'
+                or effective.get('stock_verified') is not True
+                or any(effective.get(key) is not False
+                       for key in ('mounted', 'healthy', 'filter_installed', 'routing_active'))
+                or type(effective.get('guardian_pid')) is not int or effective['guardian_pid'] != 0
+                or not isinstance(intent, dict) or intent.get('enabled') is not False
+                or intent.get('phase') != 'disabled'):
+            raise ValueError('Stock Home status could not be verified')
+        prepare_stock_home()
     if stage != 'installed-recovery-only':
         checkpoint('write-deployment-stage')
         retained_repair_write(STATE/'deploy.json', encoded(
@@ -651,7 +681,87 @@ def repair_retained_recovery(checkpoint, *, pins=None):
     return {'returnValue': True, 'status_verified': True, 'home_changed': False}
 
 
-def retained_repair_command(pins=None):
+def repair_native_product(owner, operation, pins, checkpoint):
+    from deploy import APP, install_failure_details
+    from installation import pending_journals
+    from runtime import c1_keyfilter
+
+    checkpoint('deploy-lease')
+    journal = 'product-' + operation + '.json'
+    request_name = 'request-' + operation
+    lease = owner.status()
+    if not lease or lease['owner'] != 'product' or lease['journal'] != journal:
+        raise ValueError('Original native Root product reservation required')
+    def check():
+        if owner.status() != lease:
+            raise ValueError('Original native Root product reservation changed')
+        pending_journals('deploy')
+
+    with owner.operation('product', journal, resume=lease['id'], check=check) as current:
+        request = owner.store.read(request_name)
+        completion = {'returnValue': True, 'installed': APP, 'home_changed': False}
+        failed = (isinstance(request, dict) and request.get('state') == 'recovery_required'
+                  and request.get('stage') == 'root-deploy'
+                  and request.get('code') == 'installation_requires_recovery'
+                  and current['stage'] == 'root-deploy' and not current['terminal'])
+        complete = (isinstance(request, dict) and request.get('state') == 'complete'
+                    and request.get('stage') == 'complete' and request.get('code') == 'verified'
+                    and request.get('result') == completion
+                    and (current['stage'], current['terminal']) in (('root-deploy', False), ('complete', True)))
+        if (not (failed or complete) or request.get('operation') != operation
+                or request.get('lease') != current['id'] or request.get('action') != 'install'
+                or request.get('home_changed') is not False or current != lease
+                or not isinstance(request.get('clean_predecessor'), str)
+                or not re.fullmatch('[a-f0-9]{32}', request['clean_predecessor'])
+                or request['clean_predecessor'] == operation):
+            raise ValueError('Original failed native Root request required')
+        failure = request.get('failure')
+        driver = install_failure_details(failure.get('root_driver')) if isinstance(failure, dict) else {}
+        # These retained driver frames are specific to the 0.23.0 provisioning loop.
+        if driver != {'exception_type': 'CalledProcessError', 'exit_status': 1,
+                      'frames': [{'file': 'deploy.py', 'line': 315}, {'file': 'deploy.py', 'line': 141}]}:
+            raise ValueError('Original native Root provisioning failure required')
+
+        checkpoint('provision-lock')
+        fd = os.open(STATE/'provision.lock', os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != owner.store.uid
+                    or info.st_nlink != 1 or info.st_mode & 0o077):
+                raise ValueError('Unsafe Root provision lock')
+            fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+            deploy_path, failure_path = STATE/'deploy.json', STATE/'recovery-failure.json'
+            deployment = json.loads(secure(deploy_path))
+            if complete and deployment.get('stage') != 'installed-recovery-only':
+                raise ValueError('Completed native Root provisioning stage required')
+            if deployment.get('stage') == 'provision-finalize-starting':
+                # This historical path never bound the child's failure to an
+                # attempt ID. Require it to fall within the original journal
+                # interval rather than accepting an older failure record.
+                secure(failure_path)
+                request_path = Path(owner.store.root)/(request_name+'.json')
+                if not (deploy_path.stat().st_mtime_ns <= failure_path.stat().st_mtime_ns
+                        <= request_path.stat().st_mtime_ns):
+                    raise ValueError('Original native Root failure chronology changed')
+            checkpoint('stock-home')
+            with c1_keyfilter.operation(STATE):
+                intent = c1_keyfilter.read_intent(STATE)
+                if (intent['enabled'] or intent['phase'] != 'disabled'
+                        or os.path.lexists(STATE/'c1-keyfilter/pending.json')):
+                    raise ValueError('Active or retained Home routing prevents Root repair')
+                result = repair_retained_recovery(checkpoint, pins=pins, native_product=True)
+                checkpoint('close-deploy-lease')
+                if failed:
+                    request.update(stage='complete', state='complete', code='verified', result=completion)
+                    owner.store.write(request_name, request)
+                if not current['terminal']:
+                    owner.stage(current, 'complete', terminal=True)
+        finally:
+            os.close(fd)
+        return dict(result, operation=operation)
+
+
+def retained_repair_command(pins=None, *, product_operation=None):
     stage = 'device'
 
     def checkpoint(value):
@@ -665,6 +775,9 @@ def retained_repair_command(pins=None):
         require_node()
         checkpoint('deploy-lease')
         owner = Ownership()
+        if product_operation is not None:
+            print(json.dumps(repair_native_product(owner, product_operation, pins, checkpoint)))
+            return
 
         def existing_deploy():
             lease = owner.status()
@@ -850,8 +963,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['plan','apply','refresh','finalize','rollback','repair_pending','resume_pending','repair_beta_recovery','repair_root_recovery'])
     parser.add_argument('pins', nargs='*')
+    parser.add_argument('--product-operation')
     args = parser.parse_args()
     command = args.command
+    if args.product_operation is not None and (command != 'repair_root_recovery'
+            or not re.fullmatch('[0-9a-f]{32}', args.product_operation)):
+        parser.error('Original native Root operation required')
     if command == 'repair_root_recovery':
         if len(args.pins) != 2 or any(not re.fullmatch('[0-9a-f]{64}', pin) for pin in args.pins):
             parser.error('Original Root release and bundle digests required')
@@ -866,7 +983,7 @@ def main():
     elif command == 'repair_beta_recovery':
         retained_repair_command()
     elif command == 'repair_root_recovery':
-        retained_repair_command(tuple(args.pins))
+        retained_repair_command(tuple(args.pins), product_operation=args.product_operation)
     else:
         fd = os.open(STATE/'provision.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
         try:

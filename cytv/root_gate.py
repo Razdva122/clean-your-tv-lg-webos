@@ -158,8 +158,11 @@ def stage_recovery_support(installer):
     return stage
 
 
-def verify_repair_reply(installer, stage, reply):
-    if reply != {'returnValue': True, 'status_verified': True, 'home_changed': False}:
+def verify_repair_reply(installer, stage, reply, *, operation=None):
+    expected = {'returnValue': True, 'status_verified': True, 'home_changed': False}
+    if operation is not None:
+        expected['operation'] = operation
+    if reply != expected:
         raise UserError('Root recovery status could not be verified. Keep recovery data.',
                         reason_code='root-operation-unconfirmed')
     try:
@@ -193,21 +196,36 @@ def repair_retained_root(installer, ask, write):
 
     pending = installer.store.pending(installer.profile) or {}
     pins = [pending.get('release_sha'), pending.get('bundle_sha')]
+    operation = pending.get('product_operation')
     if (installer.profile['edition'] != 'root' or installer.profile.get('root_variant')
             or pending.get('action') != 'install' or pending.get('stage') != 'setup'
             or pending.get('home_backend') != BACKEND
             or pending.get('migrate') is not False or pending.get('requires_updater') is not False
-            or any(key in pending for key in ('product_operation', 'recovery_protocol', 'activation_restore_pending', 'previous'))
+            or ('product_operation' in pending
+                and (not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation)))
+            or any(key in pending for key in ('recovery_protocol', 'activation_restore_pending', 'previous'))
             or not all(isinstance(pin, str) and re.fullmatch('[a-f0-9]{64}', pin) for pin in pins)):
         raise UserError('The original unfinished Root installation is required. Keep recovery data.',
                         reason_code='pending-operation')
     if not prompts.confirm('Repair the existing Root recovery service?', ask, write):
         return
     stage = stage_recovery_support(installer)
-    reply = json.loads(run(installer, stage, 'provision.py', ['repair_root_recovery', *pins], timeout=180))
-    verify_repair_reply(installer, stage, reply)
+    args = ['repair_root_recovery', *pins]
+    if operation is not None:
+        args += ['--product-operation', operation]
+    reply = json.loads(run(installer, stage, 'provision.py', args, timeout=180))
+    verify_repair_reply(installer, stage, reply, operation=operation)
+    if operation is not None and installer.store.pending(installer.profile) != pending:
+        raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                        reason_code='pending-operation')
     record_native_installation(installer)
+    if operation is not None:
+        archive = installer.store.device_dir(installer.profile) / ('root-recovery-' + operation + '.json')
+        private_write(archive, json.dumps({'original': pending, 'result': reply}).encode())
+        installer.store.finish(installer.profile)
     write('Root recovery service answered and its integrity was verified.')
+    if operation is not None:
+        return
     if prompts.confirm('Finish Root setup and turn on Home control?', ask, write):
         installer.resume_root_setup(expected_pending=pending)
         installer.outcome.review_home(ask, write)

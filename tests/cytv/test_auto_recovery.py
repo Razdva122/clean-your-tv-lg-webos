@@ -110,6 +110,35 @@ class FailureJourneys(unittest.TestCase):
         installer.install.assert_not_called()
         installer.uninstall_project.assert_not_called()
 
+    def test_native_product_repair_finishes_original_receipt_without_activating_home(self):
+        from cytv.root_gate import repair_retained_root
+
+        self.store.checkpoint(self.profile, stage='setup', migrate=False, requires_updater=False,
+                              home_backend='c1-native-gate', release_sha='c'*64, bundle_sha='d'*64)
+        pending = self.store.pending(self.profile)
+        installer = Mock(store=self.store, profile=self.profile)
+        with patch('cytv.root_gate.stage_recovery_support', return_value='/tmp/recovery'), \
+                patch('cytv.root_install_recovery.run') as run:
+            reply = dict(returnValue=True, status_verified=True, home_changed=False)
+            run.return_value = json.dumps(dict(reply, operation='b'*32))
+            with self.assertRaisesRegex(UserError, 'status could not be verified'):
+                repair_retained_root(installer, lambda _: 'y', self.write)
+            self.assertEqual(self.store.pending(self.profile), pending)
+
+            run.return_value = json.dumps(dict(reply, operation='a'*32))
+            confirmation = iter(('y',))
+            repair_retained_root(installer, lambda _: next(confirmation), self.write)
+            run.assert_called_with(installer, '/tmp/recovery', 'provision.py',
+                                   ['repair_root_recovery', 'c'*64, 'd'*64,
+                                    '--product-operation', 'a'*32], timeout=180)
+            self.assertIsNone(self.store.pending(self.profile))
+            archive = self.store.device_dir(self.profile)/('root-recovery-'+'a'*32+'.json')
+            self.assertEqual(json.loads(archive.read_bytes()),
+                             {'original': pending, 'result': dict(reply, operation='a'*32)})
+        installer.install.assert_not_called()
+        installer.resume_root_setup.assert_not_called()
+        installer.activate_root.assert_not_called()
+
     def test_beta_completed_stage_only_offers_repair_for_unfinished_deploy_lease(self):
         from cytv.root_gate import beta_repair_available
 

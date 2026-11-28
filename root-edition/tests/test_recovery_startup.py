@@ -142,6 +142,68 @@ handlers.status({}).then(reply => {
                 self.assertEqual(p.repair_root_recovery(pins), result)
                 self.assertEqual(finalize.call_count, 1)
 
+    def test_native_product_repair_preserves_failure_and_finishes_same_lease(self):
+        import deploy
+        from installation import Ownership
+        from updater.store import Store
+        from runtime import c1_keyfilter
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            (root/'provision.lock').touch(mode=0o600)
+            operation = 'a'*32
+            journal = 'product-'+operation+'.json'
+            store = Store(root/'operations', uid=os.getuid())
+            owner = Ownership(store)
+            with owner.operation('product', journal) as lease:
+                owner.stage(lease, 'root-deploy')
+            failure = {'root_driver': {'exception_type': 'CalledProcessError', 'exit_status': 1,
+                       'frames': [{'file': 'deploy.py', 'line': 315}, {'file': 'deploy.py', 'line': 141}]}}
+            request = {'operation': operation, 'action': 'install', 'lease': lease['id'],
+                       'stage': 'root-deploy', 'state': 'recovery_required', 'code': 'installation_requires_recovery',
+                       'home_changed': False, 'failure': failure, 'clean_predecessor': 'c'*32}
+            (root/'deploy.json').write_text(json.dumps({'stage': 'provision-finalize-starting'}))
+            (root/'recovery-failure.json').write_text('{}')
+            store.write('request-'+operation, request)
+            pins = ('1'*64, '2'*64)
+            reply = {'returnValue': True, 'status_verified': True, 'home_changed': False}
+            with patch.object(p, 'STATE', root), patch('installation.Ownership', return_value=owner), \
+                    patch.object(p, 'secure', side_effect=Path.read_bytes), \
+                    patch('installation.pending_journals') as check_journals, \
+                    patch.object(c1_keyfilter, 'operation'), \
+                    patch.object(c1_keyfilter, 'read_intent', return_value={'enabled': False, 'phase': 'disabled'}), \
+                    patch.object(deploy, 'require_device'), patch.object(deploy, 'require_node'), \
+                    patch.object(p, 'repair_retained_recovery') as repair:
+                failure_path = root/'recovery-failure.json'
+                observed_time = failure_path.stat().st_mtime_ns
+                os.utime(failure_path, ns=(0, 0))
+                with self.assertRaises(SystemExit):
+                    p.retained_repair_command(pins, product_operation=operation)
+                repair.assert_not_called()
+                check_journals.assert_called_once_with('deploy')
+                os.utime(failure_path, ns=(observed_time, observed_time))
+
+                repair.side_effect = ValueError('fixture refused verification')
+                with self.assertRaises(SystemExit):
+                    p.retained_repair_command(pins, product_operation=operation)
+                self.assertEqual(store.read('request-'+operation), request)
+                self.assertFalse(owner.status()['terminal'])
+                def verify_repair(*args, **kwargs):
+                    self.assertEqual(kwargs, {'pins': pins, 'native_product': True})
+                    (root/'deploy.json').write_text(json.dumps({'stage': 'installed-recovery-only'}))
+                    return reply
+
+                repair.side_effect = verify_repair
+                with patch.object(owner, 'stage', side_effect=OSError('interrupted')):
+                    with self.assertRaises(SystemExit):
+                        p.retained_repair_command(pins, product_operation=operation)
+                self.assertEqual(store.read('request-'+operation)['state'], 'complete')
+                self.assertFalse(owner.status()['terminal'])
+                p.retained_repair_command(pins, product_operation=operation)
+            self.assertEqual(store.read('request-'+operation)['failure'], failure)
+            self.assertEqual(owner.status()['id'], lease['id'])
+            self.assertTrue(owner.status()['terminal'])
+
     def test_beta_uses_lg_local_activity_before_bootstrap_positionals(self):
         with patch.object(p, 'LEGACY_NODE_BETA', True):
             command = shlex.split(p.runner_bytes().decode().splitlines()[-1])
