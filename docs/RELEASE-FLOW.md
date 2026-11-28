@@ -501,6 +501,14 @@ Documentation may reuse a successful pinned build only when that trusted verifie
 confirms equivalent inputs. Artifact hashes and device preconditions still govern
 physical evidence reuse.
 
+The same `scope` job runs `python scripts/check-candidate-guardian.py` against
+the integrated candidate. When the native keyfilter, its headers, the shutdown
+fixture or the preflight changes since the branch point with `origin/main`, it
+replays remote loss before broker expiry with and without confirmed shutdown.
+Run that command from the checkout root on a POSIX host with a C compiler to
+reproduce the decision before dispatch. Either failing or skipped scenario
+blocks the platform builds. The full candidate retains its runtime test matrix.
+
 ## Scoped physical acceptance and retry recovery
 
 Before testing, run:
