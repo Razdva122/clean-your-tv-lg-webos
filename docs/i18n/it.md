@@ -214,6 +214,8 @@ Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Sceg
 
 Prima di scegliere un tema, usa **Debloat** per selezionare le impostazioni LG di pubblicità, consigli, privacy e notifiche da modificare. Controlla ogni risultato. Se il programma di installazione non può leggere il valore originale, non può salvarlo per un ripristino automatico. Scegli **Salta Debloat** per mantenere le impostazioni attuali.
 
+Se il televisore rifiuta una modifica, segui le [istruzioni sulla privacy per il tuo modello con il telecomando (in inglese)](../PRIVACY.md).
+
 Entrambe le edizioni possono disattivare le trasmissioni promozionali LG se il televisore offre questa impostazione.
 
 Per annullare una singola modifica, apri Debloat in Manutenzione con la stessa connessione salvata del televisore. Seleziona l’impostazione, verifica il valore originale e conferma. Sui televisori compatibili puoi disattivare l’avvio automatico di LG Channels in Tutte le impostazioni → Generale → Canali → Avvio automatico LG Channels.
