@@ -393,6 +393,8 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     from .errors import root_driver_details
+    from .errors import home_conflict_details
+    result.update(home_conflict_details(value.get('home_conflict_paths')))
     raw_probe=mapping(value.get('cleanup_probe'))
     probe=root_driver_details(raw_probe)
     if probe and value.get('cleanup_step')=='runtime-restore':
@@ -599,6 +601,8 @@ def failure_summary(value):
     if 'guidance' in value:
         from .failure_help import report_summary
         result['guidance'] = report_summary(value['guidance'])
+    from .errors import home_conflict_details
+    result.update(home_conflict_details(value.get('home_conflict_paths')))
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int:
         if command['exit_status'] == -1 and result['reason_code'] == 'ssh-command-failed':

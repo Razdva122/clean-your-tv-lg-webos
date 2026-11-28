@@ -182,13 +182,12 @@ class Coordinator:
     def write(self, record):
         private_write(self.root / 'current.json', json.dumps(record, sort_keys=True).encode())
 
-    def reserve(self, operation, pin, candidate, snapshot=None, *, predecessor=None):
+    def reserve(self, operation, pin, candidate, snapshot=None, *, predecessor=None, handoff=None):
         self.create_root()
         previous = self.current()
         if not PIN.fullmatch(pin) or not PIN.fullmatch(candidate) or previous != predecessor:
             raise ValueError('An original operation still owns setup')
-        if previous and (previous['operation'] == operation or 'removal' not in previous
-                         or not removal_completed(previous['removal'])):
+        if previous and (previous['operation'] == operation or not predecessor_clean(previous, handoff)):
             raise ValueError('The predecessor is not currently verified clean')
         folder = self.path(operation)
         if snapshot is not None and os.path.lexists(folder):
@@ -202,7 +201,7 @@ class Coordinator:
             folder.mkdir(mode=0o700)
         sync_directory(self.root)
         if previous:
-            if not removal_completed(previous['removal']):
+            if not predecessor_clean(previous, handoff):
                 raise ValueError('Original removal changed during setup review')
             archive = self.path(previous['operation']) / 'archived-setup.json'
             saved = json.dumps(previous, sort_keys=True).encode()
@@ -211,7 +210,7 @@ class Coordinator:
                     raise ValueError('Archived setup record changed')
             else:
                 private_write(archive, saved)
-            if self.current() != previous or not removal_completed(previous['removal']):
+            if self.current() != previous or not predecessor_clean(previous, handoff):
                 raise ValueError('Original removal changed during setup review')
         record = {'schema': 1, 'operation': operation, 'payload_sha256': pin,
                   'candidate_sha256': candidate, 'stage': 'reserved'}
@@ -305,6 +304,23 @@ def removal_completed(removal, product=PRODUCT, *, require_current=True):
         return owner == {'schema': 1, 'id': final, 'journal': 'product-' + target + '.json',
                          'owner': 'clean-removal', 'stage': 'verified-clean', 'terminal': False}
     except (AttributeError, KeyError, OSError, TypeError, ValueError):
+        return False
+
+
+def predecessor_clean(record, handoff):
+    if 'removal' in record:
+        return removal_completed(record['removal'])
+    # Desktop cleanup has no Homebrew request binding. Fresh admission has
+    # independently verified live absence and included this fence in the
+    # reviewed candidate digest. Never retire partial work on this path.
+    if record['stage'] != 'complete' or not handoff:
+        return False
+    try:
+        check_directory(PRODUCT, private=True)
+        owner = json.loads(read_private(PRODUCT / 'operation.json', 2048))
+        return owner == dict(schema=1, owner='clean-removal', stage='verified-clean', terminal=False,
+                             id=handoff['lease'], journal='product-' + handoff['operation'] + '.json')
+    except (OSError, KeyError, ValueError, TypeError):
         return False
 
 
@@ -586,15 +602,18 @@ def inspect_candidate(installer, pin):
 
 def reserve_setup(coordinator, stage, pin, operation, candidate):
     predecessor = coordinator.current()
+    handoff = None
     if predecessor is not None:
         removal = predecessor.get('removal')
-        if (predecessor['operation'] == operation or not removal or not removal_completed(removal)):
+        if (predecessor['operation'] == operation or
+                (not removal and predecessor['stage'] != 'complete') or
+                (removal and not removal_completed(removal))):
             raise UserError('The original setup still owns this TV.', reason_code='existing-installation')
         installer = make_installer(coordinator, stage, pin)
         approved = inspect_candidate(installer, pin)
         handoff = getattr(installer, '_root_handoff', None)
         if (approved.get('candidate_sha256') != candidate or not handoff
-                or handoff.get('removal') != removal or not removal_completed(removal)):
+                or (removal and handoff.get('removal') != removal) or not predecessor_clean(predecessor, handoff)):
             raise UserError('Reviewed setup changed.', reason_code='root-admission-changed')
         try:
             retire_worker(coordinator.path(predecessor['operation']) / 'payload', predecessor['payload_sha256'])
@@ -605,7 +624,7 @@ def reserve_setup(coordinator, stage, pin, operation, candidate):
     with tempfile.TemporaryDirectory(prefix='.setup-', dir=coordinator.root) as temporary:
         snapshot = Path(temporary)
         copy_worker(stage, snapshot / 'payload', pin)
-        return coordinator.reserve(operation, pin, candidate, snapshot, predecessor=predecessor)
+        return coordinator.reserve(operation, pin, candidate, snapshot, predecessor=predecessor, handoff=handoff)
 
 
 def verify_packages(installer, completion):
@@ -842,9 +861,41 @@ def live_status(coordinator, operation):
         if coordinator.current() != record:
             raise ValueError('Original operation changed')
     except (KeyError, OSError, RuntimeError, ValueError, TypeError):
+        if coordinator.worker_active():
+            return answer('pending', 'no-root-operation-pending', operation=result['operation'], stage=result['stage'])
+        latest = coordinator.current()
+        if not latest or latest.get('operation') != result['operation'] or latest.get('stage') != 'complete' or 'removal' in latest:
+            return answer('recovery_required', 'original-work-unverified', operation=result['operation'],
+                          stage=result['stage'], can_resume=False)
         return answer('recovery_required', 'current-state-unverified', operation=result['operation'],
                       stage=result['stage'], can_resume=False)
     return {**result, 'current': True}
+
+
+def inspect_setup(coordinator, payload, pin, operation=None):
+    status = live_status(coordinator, operation)
+    if operation:
+        return status
+    if status['state'] == 'unknown':
+        return inspect_candidate(make_installer(coordinator, payload, pin), pin)
+    if status.get('code') != 'current-state-unverified' or status.get('stage') != 'complete':
+        return status
+    try:
+        previous = coordinator.current()
+        if (not previous or previous['operation'] != status['operation'] or previous['stage'] != 'complete'
+                or 'removal' in previous or coordinator.worker_active()):
+            return status
+        installer = make_installer(coordinator, payload, pin)
+        try:
+            review = inspect_candidate(installer, pin)
+        except (KeyError, OSError, RuntimeError, ValueError, TypeError) as error:
+            review = answer('unavailable', recovery_code(error))
+        if (coordinator.current() == previous and not coordinator.worker_active()
+                and predecessor_clean(previous, getattr(installer, '_root_handoff', None))):
+            return dict(review, superseded_no_root_operation=previous['operation'])
+    except (KeyError, OSError, RuntimeError, ValueError, TypeError):
+        pass
+    return status
 
 
 def main(argv=None):
@@ -902,11 +953,7 @@ def main(argv=None):
         if args.action == 'status':
             return live_status(coordinator, args.operation)
         if args.action == 'inspect':
-            result = live_status(coordinator, args.operation)
-            if result['state'] != 'unknown' or args.operation:
-                return result
-            return inspect_candidate(make_installer(coordinator, args.payload, args.payload_sha256),
-                                     args.payload_sha256)
+            return inspect_setup(coordinator, args.payload, args.payload_sha256, args.operation)
         if args.action == 'start':
             current = coordinator.current()
             if current is not None and current['operation'] == args.operation:

@@ -21,6 +21,16 @@ FIELDS = {'supported', 'packages_match', 'receipts_match', 'pending', 'retained'
 COMPONENTS = ('root', 'root-updater', 'system-updater')
 
 
+def home_conflict_details(paths):
+    """Export only the three fixed marker names, never their contents or link targets."""
+    known = ('/media/developer/cleanyourtv', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser')
+    if not isinstance(paths, list) or not 0 < len(paths) <= len(known):
+        return {}
+    if any(path not in known for path in paths):
+        return {}
+    return {'home_conflict_paths': [path for path in known if path in paths]}
+
+
 def classify(snapshot):
     if (not isinstance(snapshot, dict) or set(snapshot) != FIELDS
             or any(type(value) is not bool for value in snapshot.values())):

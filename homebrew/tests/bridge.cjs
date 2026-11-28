@@ -552,6 +552,33 @@ async function rejects(fn, expectedMessage) {
     (await bootstrap.run(['no-root-resume', '--operation', ID], deps)).stage,
     'installing'
   );
+  noRootAvailability = {
+    state: 'recovery_required',
+    stage: 'complete',
+    operation: ID,
+    code: 'current-state-unverified'
+  };
+  verdict = 'root';
+  assert.equal(
+    (await bootstrap.run(['inspect'], deps)).state,
+    'recovery_required'
+  );
+  Object.assign(fresh.installation, {
+    reason: 'verified_clean_removal',
+    clean_removal_verified: true,
+    can_maintain: false
+  });
+  const afterRemoval = await bootstrap.run(['inspect'], deps);
+  assert.equal(afterRemoval.state, 'fresh');
+  assert.equal(afterRemoval.superseded_no_root_operation, ID);
+  noRootAvailability.stage = 'packages';
+  assert.equal(
+    (await bootstrap.run(['inspect'], deps)).state,
+    'recovery_required'
+  );
+  Object.assign(fresh.installation, { reason: 'no_installation' });
+  delete fresh.installation.can_maintain;
+  verdict = 'external_no_root';
   deps.runtime.stage = ordinaryStage;
   deps.execute = probeExecute;
   fresh.installation.clean_removal_verified = true;
@@ -575,7 +602,7 @@ async function rejects(fn, expectedMessage) {
     (await bootstrap.run(['inspect'], deps)).state,
     'edition_unconfirmed'
   );
-  assert.equal(probeCount, 8);
+  assert.equal(probeCount, 9);
   for (const state of ['conflict', 'migration_required', 'recovery_required']) {
     fresh.state = state;
     const inspected = await bootstrap.run(['inspect'], deps);
@@ -586,7 +613,7 @@ async function rejects(fn, expectedMessage) {
   }
   assert.equal(
     probeCount,
-    8,
+    9,
     'metadata alone does not repeat the admission probe'
   );
   deps.execute = originalExecute;

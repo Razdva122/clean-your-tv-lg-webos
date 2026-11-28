@@ -21,8 +21,8 @@ description: |
   Your TV must already be rooted. Homebrew Channel must be able to run the
   Installer's status check with root privileges. On webOS 11 or later, use
   Homebrew Channel 0.8.0 or later. If the app reports access denied, update
-  Homebrew and choose **Check status**. The desktop and Android installers
-  are also available.
+  Homebrew and choose **Check status**. To install No-root on an unrooted TV,
+  enable LG Developer Mode and use the desktop or Android installer.
 
   Setup requires webOS 5.0 or later with Node.js 8 or later and a compatible Python 3.9 or later.
   The package includes an offline Python runtime for supported ARMv7 TVs.

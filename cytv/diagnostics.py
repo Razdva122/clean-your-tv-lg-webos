@@ -123,6 +123,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                 report['helper_diagnostics']['state_directory'] = context.choice(
                     getattr(error, 'home_diagnostic_directory', None),
                     ('unavailable', 'access-denied', 'access-available'))
+    from .errors import home_conflict_details
+    report.update(home_conflict_details(getattr(error, 'home_conflict_paths', None)))
     if hasattr(error, 'no_root_cleanup'):
         from .errors import no_root_cleanup_details
         report['no_root_cleanup'] = no_root_cleanup_details(error.no_root_cleanup)
