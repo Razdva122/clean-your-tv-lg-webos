@@ -2,6 +2,10 @@
 
 This proposal uses one TV tile containing the existing Home web interface and a JavaScript service registered under the same application ID prefix. The service owns pairing, installed-app discovery and optional startup. The user installs one resolution-appropriate IPK in stock Homebrew Channel and finishes setup with the remote. The starting point is a TV with an active Developer Mode session and a working Homebrew Channel. Installing Homebrew Channel or renewing an expired Developer Mode session is a separate operation.
 
+## Product acceptance baseline
+
+Use the matching desktop edition as the reference. For the v1.30.0 No-root release compare Home (selected graphics resolution), native Helper and Screensaver byte for byte before device personalization. A single Homebrew installer entry is preferred. Repackaging Home under the pilot ID or replacing Helper with the pilot JS service fails product parity. After installation, compare the personalized product files for the same TV inputs and verify the same pairing, Home routing, power and Stop behavior. The tests below characterize the pilot; they do not supersede the product baseline.
+
 ## Owner experience
 
 1. Install and open **Clean Your TV Home**. The first screen offers **Pair with this TV** and **Later**. The service requests native LG consent only after the owner selects Pair. Before the first request, explain that approval also starts the service when the TV turns on. Declining returns focus to Try again and leaves the startup preference unchanged.

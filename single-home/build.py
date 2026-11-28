@@ -13,7 +13,8 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv import package
-from homebrew.build import ipk_control_lines
+from homebrew.build import (NO_ROOT_GRAPHICS, desktop_components, desktop_component_hashes,
+                            ipk_control_lines, verify_no_root_control)
 
 APP = 'io.github.razdva122.cytvhomepilot'
 SERVICE = APP + '.service'
@@ -110,37 +111,67 @@ def build(output, version):
     print(f'{output.name}  {len(raw)} bytes  SHA-256 {hashlib.sha256(raw).hexdigest()}')
 
 
-def catalog(ipk, output, base):
+def add_catalog_card(stage, base, raw, info, icon, total, architecture, description):
+    app = info['id']
+    digest = hashlib.sha256(raw).hexdigest()
+    filename = f"{app}_{info['version']}_{architecture}.ipk"
+    asset = f'{base}/{digest}'
+    title = info['title']
+    card = {'id': app, 'title': title, 'shortDescription': description,
+            'iconUri': asset + '/icon.png', 'manifestUrl': asset + '/manifest.json'}
+    manifest = {'id': app, 'title': title, 'version': info['version'], 'type': info['type'],
+                'appDescription': description, 'rootRequired': False, 'sourceUrl': SOURCE,
+                'iconUri': card['iconUri'], 'ipkUrl': asset + '/' + filename,
+                'ipkHash': {'sha256': digest}, 'ipkSize': len(raw), 'installedSize': total}
+    folder = stage / digest
+    folder.mkdir(parents=True)
+    (folder / filename).write_bytes(raw)
+    (folder / 'icon.png').write_bytes(icon)
+    (folder / 'manifest.json').write_bytes(encode(manifest))
+    return card
+
+
+def write_catalog(output, base, entries):
     base = base.rstrip('/')
     uri = urlsplit(base)
     if (uri.scheme not in ('http', 'https') or not uri.hostname or uri.username is not None
             or uri.password is not None or uri.query or uri.fragment):
         raise ValueError('Expected an HTTP(S) base URL')
-    raw = ipk.read_bytes()
-    info, icon, total = inspect(raw)
-    digest = hashlib.sha256(raw).hexdigest()
-    filename = f"{APP}_{info['version']}_all.ipk"
-    asset = f'{base}/{digest}'
-    title = info['title']
-    description = 'Private development build of the single-tile Home app.'
-    card = {'id': APP, 'title': title, 'shortDescription': description,
-            'iconUri': asset + '/icon.png', 'manifestUrl': asset + '/manifest.json'}
-    manifest = {'id': APP, 'title': title, 'version': info['version'], 'type': 'web',
-                'appDescription': description, 'rootRequired': False, 'sourceUrl': SOURCE,
-                'iconUri': card['iconUri'], 'ipkUrl': asset + '/' + filename,
-                'ipkHash': {'sha256': digest}, 'ipkSize': len(raw), 'installedSize': total}
     if output.exists():
         raise ValueError('Select a new private feed directory')
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=output.parent) as temp:
         stage = Path(temp) / 'feed'
-        folder = stage / digest
-        folder.mkdir(parents=True)
-        (folder / filename).write_bytes(raw)
-        (folder / 'icon.png').write_bytes(icon)
-        (folder / 'manifest.json').write_bytes(encode(manifest))
-        (stage / 'apps.json').write_bytes(encode({'packages': [card]}))
+        cards = [add_catalog_card(stage, base, *entry) for entry in entries]
+        (stage / 'apps.json').write_bytes(encode({'packages': cards}))
         stage.rename(output)
+
+
+def catalog(ipk, output, base):
+    raw = ipk.read_bytes()
+    write_catalog(output, base, [(raw, *inspect(raw), 'all', 'Private development build of the single-tile Home app.')])
+
+
+def desktop_entries(desktop, resolution):
+    components = desktop_components(desktop)
+    desktop_component_hashes(components)
+    manifest = json.loads(components['payload.json'])
+    for name, app, version, architecture in (
+        (NO_ROOT_GRAPHICS[resolution]['launcher'], 'com.gathin.tvhome', manifest['home_version'], 'all'),
+        ('helper.ipk', 'com.local.nativehome', manifest['helper_version'], 'arm'),
+        (package.SCREENSAVER_IPK, package.SCREENSAVER_APP, manifest['screensaver_version'], 'all'),
+    ):
+        raw = components[name]
+        verify_no_root_control(raw, app, version, architecture)
+        files = package.data_files(raw)
+        prefix = 'usr/palm/applications/' + app + '/'
+        info = json.loads(files[prefix + 'appinfo.json'])
+        if info['id'] != app or info['version'] != version:
+            raise ValueError('Desktop application identity mismatch: ' + name)
+        if app == 'com.gathin.tvhome' and info.get('resolution') != resolution:
+            raise ValueError('Desktop Home resolution mismatch')
+        icon = files[prefix + package.safe_name(info['icon'])]
+        yield raw, info, icon, sum(map(len, files.values())), architecture, 'Desktop No-root component for installation parity checks.'
 
 
 if __name__ == '__main__':
@@ -153,10 +184,17 @@ if __name__ == '__main__':
     feed.add_argument('--ipk', type=Path, required=True)
     feed.add_argument('--output', type=Path, required=True)
     feed.add_argument('--base-url', required=True)
+    desktop = commands.add_parser('desktop-catalog', help='Create a private feed from unchanged desktop No-root IPKs')
+    desktop.add_argument('--desktop-payload', type=Path, required=True)
+    desktop.add_argument('--resolution', choices=sorted(NO_ROOT_GRAPHICS), required=True)
+    desktop.add_argument('--output', type=Path, required=True)
+    desktop.add_argument('--base-url', required=True)
     args = parser.parse_args()
     try:
         if args.command == 'build':
             build(args.output, args.version)
+        elif args.command == 'desktop-catalog':
+            write_catalog(args.output, args.base_url, desktop_entries(args.desktop_payload, args.resolution))
         else:
             catalog(args.ipk, args.output, args.base_url)
     except (OSError, ValueError, KeyError) as exc:

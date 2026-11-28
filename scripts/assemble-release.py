@@ -195,7 +195,7 @@ def verify_android_package(path, report, versions, commit, *, allow_legacy=False
         return verify_embedded(lambda name: archive.read('assets/payload/' + name), versions, allow_legacy=allow_legacy)
 
 
-def assemble_homebrew(artifacts, output, approval):
+def assemble_homebrew(artifacts, output, approval, desktop_payload):
     """Unaccepted CI artifacts never enter the public release asset directory."""
     if approval is None: return None
     gate=runpy.run_path(str(ROOT / 'scripts/homebrew-manifest.py'))
@@ -206,6 +206,11 @@ def assemble_homebrew(artifacts, output, approval):
     package.safe_name(name)
     raw=(folder/name).read_bytes()
     gate['verify_accepted'](raw,metadata,approval)
+    from homebrew.build import APP_PREFIX, desktop_parity, installer_files
+    contents = installer_files(raw)
+    # Legacy Root-only releases have no No-root product to compare.
+    if any(name.startswith(APP_PREFIX + 'payload/no-root/') for name in contents):
+        desktop_parity(desktop_payload, contents)
     (output/name).write_bytes(raw)
     (output/gate['MANIFEST_NAME']).write_bytes(metadata)
     return approval
@@ -360,7 +365,7 @@ def _assemble_assets(artifacts, output, versions, commit, build_commit):
             'embedded_payload_verification': checks,
             'hardware_evidence': json.loads((ROOT / 'release-plan.json').read_text()).get('acceptance', 'No physical acceptance recorded.'),
             'acceptance_build': json.loads((ROOT / 'release-plan.json').read_text()).get('acceptance_build')}
-    approval = assemble_homebrew(artifacts, output, selected_homebrew_approval())
+    approval = assemble_homebrew(artifacts, output, selected_homebrew_approval(), arm_payload)
     bootstrap = output / 'system-bootstrap-manifest.json'
     if bootstrap.exists():
         info['system_engine'] = json.loads(bootstrap.read_text())['engine']

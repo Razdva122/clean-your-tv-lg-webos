@@ -14,3 +14,18 @@ After installing the project dependencies, build from the checkout root using th
 Use the base URL actually serving the private feed. Add its `apps.json` in Homebrew Channel, install the card, then open Home. After pairing, Home shows installed applications. The owner can stop or resume background startup in Settings. Pairing again and updating the package preserve that choice, including an existing pairing with startup off. A service callback can run while HDMI stays in the foreground. Use a distinct numeric `--version` for a selected update test.
 
 For physical acceptance, verify the actual packaged service's harmless storage canary across service exit, upgrade, restart and power loss before submitting a real pairing request. Check a boot-scoped callback receipt before crediting background startup. The [design and acceptance cases](../docs/superpowers/specs/2026-11-28-single-package-home-design.md) define the evidence required for publication.
+
+
+## Desktop No-root parity
+
+The desktop installer is the reference for the product files and setup. The pilot has a different application ID and controller. A successful pilot install does not qualify the desktop product for publication.
+
+For a private component comparison, run the following with the unpersonalized payload extracted from the verified desktop installer and the URL that will serve the feed. Select the TV's resolution. The feed carries the original Home, native Helper and Screensaver IPKs. Installing the cards individually does not perform the desktop setup steps.
+
+```sh
+.venv-cytv/bin/python single-home/build.py desktop-catalog --desktop-payload /path/to/desktop/payload --resolution 1920x1080 --base-url https://example.org/private-home --output build/desktop-reference-feed
+```
+
+The [one-tile installer build](../homebrew/build.py) accepts `--desktop-payload` for both offline payload assembly and final packaging. With a compatible single-tile desktop build, it copies both Home resolutions, Helper, Screensaver and the fallback image directly from that build. Release assembly compares the packaged No-root files to the selected desktop installer's payload before including the Homebrew candidate. Retain the existing signed update and rollback contracts.
+
+The public v1.30.0 desktop release uses visible Home and Helper packages. The one-tile installer expects the second-generation product and supervisor. Hiding the v1.30.0 apps would change their IPKs. A single installer entry that deploys those original packages and configures them on an unrooted TV remains an open requirement. Acceptance also requires matching installed files after the per-TV app catalog and connection type are applied, real pairing, Home control, startup and durable Stop.
