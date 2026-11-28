@@ -308,7 +308,11 @@ check. The coordinator must verify all of the following against actual packages:
    `verify_engine_transition` from `scripts/prepare-release.py`. Shared support
    code counts as engine content. A changed archive requires a higher engine
    version before freeze, including when the System Updater app version stays
-   the same.
+   the same. Run `python scripts/check-engine-transition.py` from the candidate
+   checkout with authenticated `gh` and Node.js. It builds the installer Engine
+   bundle, verifies the latest stable release's signed bootstrap catalog and
+   published archive, and checks the transition. The full candidate workflow
+   runs this check in `scope` before starting validation and package jobs.
 4. Audit any other selected signing/promotion approval, including a selected
    Homebrew Installer record. Mandatory evidence must already exist; explicitly
    deferred product limitations must be documented rather than marked passed.
