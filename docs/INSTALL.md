@@ -122,6 +122,8 @@ diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 
 Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
 
+If the TV rejects a change, follow the [LG privacy guide for your model](PRIVACY.md). For network filtering, see [DNS setup without root](PRIVACY-DNS.md) and [the services CYTV contacts](CYTV-NETWORK.md).
+
 Both editions can turn off LG promotional streams when the TV exposes the setting.
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
@@ -164,9 +166,9 @@ inactive recovery evidence is retained intentionally.
 
 ## Candidate: on-TV Root installation
 
-**Unpublished:** the separate CYTV Installer for Homebrew Channel is Root-only;
-no public catalog listing is established. It requires a verified candidate package,
-compatible ARM32 TV, effective root services and runtime/storage checks. Choose
+**Unpublished:** the separate CYTV Installer for Homebrew Channel requires an
+already-rooted ARM32 TV, effective root services, a verified candidate package
+and passing runtime/storage checks. For Root, choose
 **Install and activate** and confirm once. The Installer sets up Root Home,
 Root Updater and System Updater together, then activates Root Home. If it
 finds compatible settings from a previous Clean Your TV Home setup, it
@@ -177,9 +179,10 @@ maintenance screen still offers **Activate Root Home** and **Restore LG Home**.
 Homebrew updates the Installer app. The product updaters handle Clean Your TV
 updates.
 
-If the Installer directs you to a computer for Root setup, use the desktop
-installer. If it identifies a No-root alternative, use the computer or Android
-installer for No-root. If it cannot identify the supported Home interfaces,
+If the Installer identifies a supported on-TV No-root alternative, confirm the
+installation and allow webOS remote-control pairing on the TV. Reopen the tile
+to continue the same request. If it directs you to a computer for Root setup,
+use the desktop installer. If it cannot identify the supported Home interfaces,
 choose **Check status** before selecting an edition.
 
 For candidate testing on webOS 11 or later, use

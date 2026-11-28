@@ -6,13 +6,13 @@ contain the published desktop and Android installers. The on-TV application
 
 ## Listing and package identity
 
-The [catalog YAML](io.github.razdva122.cytvinstaller.yml) describes the development
-package with its current Root-only payload and `rootRequired: true`. The planned
-autonomous installer will prefer Root and offer No-root after confirming both Root
-incompatibility and support for on-TV No-root setup. See the
-[edition-selection design](../../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md). Before advertising that flow, reconcile the listing, manifest,
-payload and results for both editions on the selected artifact. An inconclusive
-prerequisite check or an interrupted operation cannot establish incompatibility.
+The [catalog YAML](io.github.razdva122.cytvinstaller.yml) describes the
+development package. The manifest still requires Homebrew on an already-rooted
+TV. The installer selects Root by default and offers No-root when Root is
+positively ruled out and the on-TV No-root prerequisites pass. Verify both
+flows on the selected artifact before submission. An inconclusive prerequisite
+check or an interrupted operation cannot establish incompatibility.
+[Edition-selection design](../../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
 
 Copy the final YAML to `packages/io.github.razdva122.cytvinstaller.yml` in
 `webosbrew/apps-repo`. Upstream derives the package ID from the filename and

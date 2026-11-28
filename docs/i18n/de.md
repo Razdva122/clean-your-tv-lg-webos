@@ -212,6 +212,8 @@ Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Co
 
 Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
 
+Lehnt der Fernseher eine Änderung ab, folgen Sie der [Anleitung für die Datenschutzeinstellungen mit der Fernbedienung (Englisch)](../PRIVACY.md) für Ihr Modell.
+
 Beide Editionen können LG-Werbestreams abschalten, sofern der Fernseher die Einstellung bereitstellt.
 
 Um eine einzelne Änderung rückgängig zu machen, öffnen Sie Debloat unter Wartung mit derselben gespeicherten TV-Verbindung. Wählen Sie eine gespeicherte Einstellung, prüfen Sie den ursprünglichen Wert und bestätigen Sie. Auf unterstützten Fernsehern lässt sich der Autostart von LG Channels unter Alle Einstellungen → Allgemein → Sender → LG Channels automatisch starten ausschalten.

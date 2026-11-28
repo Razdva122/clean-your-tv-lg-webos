@@ -2,6 +2,9 @@
 if (window.HomeI18n)
   window.HomeI18n.add({
     'ru': {
+      'The TV rejected the request to restore this setting.':
+        'Телевизор отклонил запрос на восстановление этой настройки.',
+      'Open privacy guide': 'Открыть руководство по конфиденциальности',
       'Set up your TV': 'Настроить телевизор',
       'Adjust LG settings': 'Изменить настройки LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -54,6 +57,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Не удалось восстановить настройку'
     },
     'de': {
+      'The TV rejected the request to restore this setting.':
+        'Der Fernseher hat die Wiederherstellung dieser Einstellung abgelehnt.',
+      'Open privacy guide': 'Datenschutzanleitung öffnen',
       'Set up your TV': 'Fernseher einrichten',
       'Adjust LG settings': 'LG-Einstellungen ändern',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -109,6 +115,9 @@ if (window.HomeI18n)
         'Die Einstellung konnte nicht wiederhergestellt werden'
     },
     'es': {
+      'The TV rejected the request to restore this setting.':
+        'El televisor rechazó la solicitud de restaurar este ajuste.',
+      'Open privacy guide': 'Abrir la guía de privacidad',
       'Set up your TV': 'Configurar el televisor',
       'Adjust LG settings': 'Cambiar los ajustes de LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -167,6 +176,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'No se pudo restaurar el ajuste'
     },
     'fr': {
+      'The TV rejected the request to restore this setting.':
+        'Le téléviseur a refusé de rétablir ce réglage.',
+      'Open privacy guide': 'Ouvrir le guide de confidentialité',
       'Set up your TV': 'Configurer le téléviseur',
       'Adjust LG settings': 'Modifier les réglages LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -224,6 +236,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Impossible de rétablir le réglage'
     },
     'it': {
+      'The TV rejected the request to restore this setting.':
+        'Il televisore ha rifiutato di ripristinare questa impostazione.',
+      'Open privacy guide': 'Apri la guida alla privacy',
       'Set up your TV': 'Configura il televisore',
       'Adjust LG settings': 'Modifica le impostazioni LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -279,6 +294,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Impossibile ripristinare l’impostazione'
     },
     'cs': {
+      'The TV rejected the request to restore this setting.':
+        'Televizor odmítl požadavek na obnovení tohoto nastavení.',
+      'Open privacy guide': 'Otevřít průvodce ochranou soukromí',
       'Set up your TV': 'Nastavit televizor',
       'Adjust LG settings': 'Upravit nastavení LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -330,6 +348,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Nastavení se nepodařilo obnovit'
     },
     'pl': {
+      'The TV rejected the request to restore this setting.':
+        'Telewizor odrzucił żądanie przywrócenia tego ustawienia.',
+      'Open privacy guide': 'Otwórz poradnik prywatności',
       'Set up your TV': 'Skonfiguruj telewizor',
       'Adjust LG settings': 'Zmień ustawienia LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -381,6 +402,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Nie udało się przywrócić ustawienia'
     },
     'pt-BR': {
+      'The TV rejected the request to restore this setting.':
+        'A TV recusou a solicitação de restaurar essa configuração.',
+      'Open privacy guide': 'Abrir o guia de privacidade',
       'Set up your TV': 'Configurar a TV',
       'Adjust LG settings': 'Alterar as configurações da LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -437,6 +461,9 @@ if (window.HomeI18n)
         'Não foi possível restaurar a configuração'
     },
     'ro': {
+      'The TV rejected the request to restore this setting.':
+        'Televizorul a refuzat solicitarea de restabilire a acestei setări.',
+      'Open privacy guide': 'Deschide ghidul de confidențialitate',
       'Set up your TV': 'Configurează televizorul',
       'Adjust LG settings': 'Modifică setările LG',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -495,6 +522,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'Setarea nu a putut fi restabilită'
     },
     'ko': {
+      'The TV rejected the request to restore this setting.':
+        'TV가 이 설정의 복원 요청을 거부했습니다.',
+      'Open privacy guide': '개인정보 보호 가이드 열기',
       'Set up your TV': 'TV 설정하기',
       'Adjust LG settings': 'LG 설정 변경',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -546,6 +576,9 @@ if (window.HomeI18n)
       'Could not restore the setting': '설정을 복원하지 못했습니다'
     },
     'hi': {
+      'The TV rejected the request to restore this setting.':
+        'टीवी ने इस सेटिंग को बहाल करने का अनुरोध अस्वीकार कर दिया।',
+      'Open privacy guide': 'गोपनीयता गाइड खोलें',
       'Set up your TV': 'अपना टीवी सेट करें',
       'Adjust LG settings': 'LG की सेटिंग बदलें',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -599,6 +632,9 @@ if (window.HomeI18n)
       'Could not restore the setting': 'सेटिंग वापस नहीं लाई जा सकी'
     },
     'zh-Hans': {
+      'The TV rejected the request to restore this setting.':
+        '电视拒绝了还原此设置的请求。',
+      'Open privacy guide': '打开隐私指南',
       'Set up your TV': '设置电视',
       'Adjust LG settings': '调整 LG 设置',
       'Choose a theme and adjust LG settings whenever you like.':
@@ -648,6 +684,9 @@ if (window.HomeI18n)
       'Could not restore the setting': '无法还原设置'
     },
     'zh-Hant': {
+      'The TV rejected the request to restore this setting.':
+        '電視已拒絕還原此設定的要求。',
+      'Open privacy guide': '開啟隱私指南',
       'Set up your TV': '設定電視',
       'Adjust LG settings': '調整 LG 設定',
       'Choose a theme and adjust LG settings whenever you like.':

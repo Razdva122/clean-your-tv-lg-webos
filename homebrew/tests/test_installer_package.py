@@ -1,5 +1,8 @@
+import hashlib
 import io
 import json
+import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -108,6 +111,84 @@ class InstallerPackageTests(unittest.TestCase):
                 build.installer_files(self.raw({invalid:payload}))
         with self.assertRaises(ValueError):
             build.installer_files(self.raw({name:b'x'*(64*1024*1024+1)}))
+
+    def test_large_no_root_media_only_use_their_fixed_package_paths(self):
+        prefix = build.APP_PREFIX + 'payload/no-root/'
+        media = b'x' * (17 * 1024 * 1024)
+        files = {prefix + name: media for name in ('launcher.ipk', 'launcher-720p.ipk', 'screensaver.ipk')}
+        self.assertEqual(build.installer_files(self.raw(files)), files)
+        for name in ('helper.ipk', 'other.ipk', 'subdir/launcher.ipk'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                build.installer_files(self.raw({prefix + name: media}))
+
+    def no_root_payload(self, folder, change=None):
+        graphics = {'1920x1080': {'launcher': 'launcher.ipk', 'root': 'root'},
+                    '1280x720': {'launcher': 'launcher-720p.ipk', 'root': 'root-720p'}}
+        version = '1.2.3'
+        archives = {'fallback.png': b'tile fallback icon'}
+        for name, app, service, architecture, kind, main, attributes in (
+            ('launcher.ipk', 'com.gathin.tvhome', 'com.gathin.tvhome.renewal', 'all', 'web', 'index.html',
+             {'resolution': '1920x1080', 'cytvProductGeneration': 2, 'systemUpdateProtocol': 1}),
+            ('launcher-720p.ipk', 'com.gathin.tvhome', 'com.gathin.tvhome.renewal', 'all', 'web', 'index.html',
+             {'resolution': '1920x1080' if change == 'graphics' else '1280x720',
+              'cytvProductGeneration': 2, 'systemUpdateProtocol': 1}),
+            ('helper.ipk', 'com.local.nativehome', 'com.local.nativehome.service', 'arm', 'native', 'detach',
+             {'cytvProductGeneration': 2}),
+            ('screensaver.ipk', 'com.cleanyourtv.screensaver', None, 'all', 'web', 'index.html',
+             {'defaultWindowType': 'popup'}),
+        ):
+            prefix = 'usr/palm/applications/' + app + '/'
+            info = dict(attributes, id=app, version=version, type=kind, main=main,
+                        visible=(name == 'helper.ipk' and change == 'visible'))
+            metadata = {'id': app, 'version': version, 'app': app, 'services': [service] if service else []}
+            members = {prefix + 'appinfo.json': json.dumps(info).encode(), prefix + main: b'entry',
+                       'usr/palm/packages/' + app + '/packageinfo.json': json.dumps(metadata).encode()}
+            if service:
+                members['usr/palm/services/' + service + '/services.json'] = json.dumps({'id': service}).encode()
+                members['usr/palm/services/' + service + '/package.json'] = json.dumps({'version': version}).encode()
+            control_app = 'foreign.application' if name == 'helper.ipk' and change == 'control' else app
+            archives[name] = package.ipk(control_app, version, members, architecture=architecture)
+        manifest = {'schema': 1, 'graphics': graphics, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk',
+                    'home_version': version, 'helper_version': version, 'screensaver': 'screensaver.ipk',
+                    'screensaver_version': version, 'files': {name: hashlib.sha256(data).hexdigest()
+                                                             for name, data in archives.items()}}
+        if change == 'hash':
+            archives['launcher.ipk'] += b'changed'
+        if change == 'replace-tile':
+            manifest['single_tile'] = {'no-root': 'tile-no-root.ipk'}
+        for name, data in archives.items():
+            (folder / name).write_bytes(data)
+        (folder / 'payload.json').write_text(json.dumps(manifest))
+        return manifest
+
+    def test_no_root_payload_carries_only_hidden_desktop_compatible_product_packages(self):
+        for change in (None, 'graphics', 'visible', 'hash', 'replace-tile', 'control'):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory).resolve()
+                manifest = self.no_root_payload(folder, change)
+                verify = getattr(build, 'verify_no_root_payload', None)
+                self.assertIsNotNone(verify, 'Missing No-root payload validation')
+                if change is None:
+                    self.assertEqual(verify(folder), manifest)
+                    self.assertEqual(package.verify_payload(folder), manifest)
+                else:
+                    with self.assertRaises(ValueError):
+                        verify(folder)
+
+    def test_no_root_runtime_stages_a_pure_python_websocket_client_and_license(self):
+        stage = getattr(build, 'stage_websockets', None)
+        self.assertIsNotNone(stage, 'Missing No-root Python dependency staging')
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory).resolve()
+            stage(folder)
+            self.assertTrue((folder / 'websockets-15.0.1.dist-info/LICENSE').stat().st_size)
+            self.assertFalse(any(path.suffix != '.py' for path in (folder / 'websockets').rglob('*') if path.is_file()))
+            completed = subprocess.run([sys.executable, '-I', '-B', '-S', '-c',
+                'import sys; sys.path.insert(0, sys.argv[1]); '
+                'from websockets.sync.client import connect; '
+                'from websockets import __version__; print(__version__)', str(folder)],
+                capture_output=True, check=True, text=True)
+            self.assertEqual(completed.stdout.strip(), '15.0.1')
 
     def test_duplicate_and_link_entries_are_rejected(self):
         prefix='usr/palm/applications/io.github.razdva122.cytvinstaller/'

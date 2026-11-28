@@ -64,6 +64,41 @@ class DebloatTests(unittest.TestCase):
                 self.assertEqual(events['homePromotion'],
                                  'write-unavailable' if isinstance(reply, Exception) else 'write-rejected')
 
+    def test_manual_steps_are_limited_to_rejected_writes_and_the_selected_setting(self):
+        sections = {
+            'home-promotions': ('homePromotion', 'contentRecommendation'),
+            'screensaver': ('screenSaverAd',), 'viewing': ('livePlus',),
+            'advertising': ('adCookie', 'lmt'), 'tips': ('aiNudge',), 'sports': ('sportsAlarm',),
+            'live-promotions': ('livePromotion', 'promotionStreamer', 'webOSPromotionVideo'),
+            'log-uploads': ('dbgLogUpload', 'faultLogUpload'),
+        }
+        self.assertTrue(set(debloat.SETTINGS).issubset({key for group in sections.values() for key in group}))
+        for lang, filename in (('ru', 'PRIVACY.ru.md'), ('en', 'PRIVACY.md'), ('de', 'PRIVACY.md')):
+            with patch.object(debloat, 'resolved_language', return_value=lang):
+                for section, keys in sections.items():
+                    for key in keys:
+                        for status in ('firmware-blocked', 'write-rejected', 'restore-rejected'):
+                            with self.subTest(lang=lang, key=key, status=status):
+                                self.assertTrue(debloat.privacy_guide(key, status).endswith('/' + filename + '#' + section))
+        for status in (*debloat.DIAGNOSTIC_RESULTS, 'failed', 'unverified'):
+            if status not in ('write-rejected', 'restore-rejected'):
+                self.assertIsNone(debloat.privacy_guide('livePlus', status))
+        self.assertIsNone(debloat.privacy_guide('unknown', 'write-rejected'))
+
+    def test_terminal_links_only_the_setting_rejected_by_root(self):
+        from cytv.terminal import Console
+
+        self.installer.remote = Mock(root=True)
+        self.installer.remote.luna.side_effect = [
+            {'returnValue': True, 'settings': {'homePromotion': 'on'}}, {'returnValue': False},
+            {'returnValue': True, 'settings': {'contentRecommendation': 'on'}}, TimeoutError(),
+        ]
+        output = []
+        answers = iter(['y', '1', '0', '0', '0', 'y', '1'])
+        debloat.run(self.installer, lambda _: next(answers), Console(output.append))
+        self.assertEqual([line for line in output if line.startswith('https://')],
+                         [debloat.privacy_guide('homePromotion', 'write-rejected')])
+
     def test_result_states_and_journal_precedes_write(self):
         values = {'homePromotion': 'off', 'screenSaverAd': 'on', 'lmt': 'off'}
         writes = []
@@ -191,7 +226,8 @@ class DebloatTests(unittest.TestCase):
         self.installer.remote = Mock(root=True)
         for decision, replies, expected, keep in (
             ('n', ['off'], None, True),
-            ('y', ['off', 'off', False], 'restore-failed', True),
+            ('y', ['off', 'off', False], 'restore-rejected', True),
+            ('y', ['off', 'off', TimeoutError()], 'restore-failed', True),
             ('y', ['off', 'off', True, 'on'], 'restored', False),
             (None, ['on'], 'restore-already', False),
         ):
@@ -205,11 +241,15 @@ class DebloatTests(unittest.TestCase):
                         self.assertEqual(payload, {'category': 'general', 'keys': ['sportsAlarm']})
                         return {'returnValue': True, 'settings': {'sportsAlarm': value}}
                     self.assertEqual(payload, {'category': 'general', 'settings': {'sportsAlarm': 'on'}})
+                    if isinstance(value, Exception):
+                        raise value
                     return {'returnValue': value}
                 self.installer.remote.luna.side_effect = luna
                 log, events = [], {}
                 debloat.run(self.installer, lambda _: next(answers), Console(log.append),
                             maintenance=True, diagnostic=events)
+                self.assertEqual([line for line in log if line.startswith('https://')],
+                                 [debloat.privacy_guide('sportsAlarm', expected)] if expected == 'restore-rejected' else [])
                 self.assertEqual(list(values), [])
                 self.assertEqual(events, {'sportsAlarm': expected} if expected else {})
                 saved = json.loads(self.record.read_text())['settings']

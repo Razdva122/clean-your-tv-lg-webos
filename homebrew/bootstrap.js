@@ -31,6 +31,9 @@ function parse(args) {
     [
       'inspect',
       'prepare-runtime',
+      'no-root-start',
+      'no-root-status',
+      'no-root-resume',
       'install',
       'status',
       'restore',
@@ -65,6 +68,9 @@ function parse(args) {
   var allowed = {
     inspect: ['supervisor'],
     'prepare-runtime': [],
+    'no-root-start': ['operation', 'candidate'],
+    'no-root-status': ['operation'],
+    'no-root-resume': ['operation'],
     install: [
       'operation',
       'candidate',
@@ -92,6 +98,9 @@ function parse(args) {
       'install',
       'remove',
       'status',
+      'no-root-start',
+      'no-root-status',
+      'no-root-resume',
       'homebrew-remove',
       'homebrew-remove-status',
       'homebrew-remove-tile'
@@ -100,7 +109,7 @@ function parse(args) {
   )
     fail();
   if (
-    ['install', 'remove'].indexOf(action) >= 0 &&
+    ['install', 'remove', 'no-root-start'].indexOf(action) >= 0 &&
     !request.resume &&
     !request.candidate
   )
@@ -181,7 +190,54 @@ function withEvidence(result, evidence) {
   }
   return result;
 }
-function inspectEdition(result, stage, python, executeRead, evidence) {
+function noRootAction(deps, state, stage, action, request) {
+  if (!stage.noRoot) fail();
+  var command = [
+    '-E',
+    '-s',
+    '-B',
+    stage.noRoot,
+    action,
+    '--payload',
+    stage.root,
+    '--payload-sha256',
+    PAYLOAD_SHA256
+  ];
+  if (request && request.operation)
+    command.push('--operation', request.operation);
+  if (request && request.candidate)
+    command.push('--candidate', request.candidate);
+  if (request && request.removal) command.push('--removal', request.removal);
+  return deps.execute(state.python, command).then(function (raw) {
+    var result = JSON.parse(raw);
+    if (!result || typeof result.state !== 'string') fail();
+    result.edition = 'no-root';
+    return result;
+  });
+}
+function withNoRootStage(deps, state, action, request) {
+  var stageKind =
+    action === 'start' || action === 'inspect' ? 'no-root' : 'no-root-status';
+  return deps.runtime.stage(state, stageKind).then(function (stage) {
+    return Promise.resolve()
+      .then(function () {
+        return noRootAction(deps, state, stage, action, request);
+      })
+      .then(
+        function (result) {
+          return stage.cleanup().then(function () {
+            return result;
+          });
+        },
+        function (error) {
+          return stage.cleanup().then(function () {
+            throw error;
+          });
+        }
+      );
+  });
+}
+function inspectEdition(result, stage, state, deps, evidence) {
   var installation = result.installation,
     fresh = result.state === 'fresh' && !result.active_operation,
     eligible =
@@ -201,7 +257,8 @@ function inspectEdition(result, stage, python, executeRead, evidence) {
   if (eligible) evidence.checks['home-compatibility'] = 'unknown';
   var command = ['-E', '-s', '-B', stage.editionInspector];
   if (!eligible) command.push('--metadata-only');
-  return executeRead(python, command)
+  return deps
+    .execute(state.python, command)
     .then(function (raw) {
       var observation = JSON.parse(raw),
         decision = observation.decision,
@@ -222,6 +279,17 @@ function inspectEdition(result, stage, python, executeRead, evidence) {
       }
       if (decision === 'external_no_root' || decision === 'external_root') {
         evidence.checks['home-compatibility'] = 'fail';
+        if (decision === 'external_no_root' && stage.noRoot) {
+          return withNoRootStage(deps, state, 'inspect').then(
+            function (alternative) {
+              if (alternative.state === 'eligible')
+                alternative.state = 'no_root_ready';
+              if (alternative.state === 'unavailable')
+                alternative.state = 'no_root_unavailable';
+              return alternative;
+            }
+          );
+        }
         return {
           state: 'external_setup',
           code:
@@ -246,37 +314,49 @@ function runRemoval(deps, request) {
         .then(function (state) {
           if (!state.python) fail();
           var removing = request.action === 'homebrew-remove';
-          return deps.runtime
-            .stage(state, removing ? 'removal' : false)
-            .then(function (stage) {
-              var args = [
-                '-E',
-                '-s',
-                '-B',
-                stage.driver,
-                request.action,
-                '--operation',
-                request.operation
-              ];
-              if (removing) args.push('--payload', stage.root);
-              return deps
-                .execute(state.python, args)
-                .then(function (raw) {
-                  return JSON.parse(raw);
+          var receipt =
+            state.context && state.context.manifest.files['edition/no_root.py'];
+          var ready =
+            removing && receipt
+              ? withNoRootStage(deps, state, 'prepare-remove', {
+                  removal: request.operation
                 })
-                .then(
-                  function (result) {
-                    return stage.cleanup().then(function () {
-                      return result;
-                    });
-                  },
-                  function (error) {
-                    return stage.cleanup().then(function () {
-                      throw error;
-                    });
-                  }
-                );
-            });
+              : Promise.resolve({ state: 'unknown' });
+          return ready.then(function (decision) {
+            if (['unknown', 'removal_ready'].indexOf(decision.state) < 0)
+              return decision;
+            return deps.runtime
+              .stage(state, removing ? 'removal' : false)
+              .then(function (stage) {
+                var args = [
+                  '-E',
+                  '-s',
+                  '-B',
+                  stage.driver,
+                  request.action,
+                  '--operation',
+                  request.operation
+                ];
+                if (removing) args.push('--payload', stage.root);
+                return deps
+                  .execute(state.python, args)
+                  .then(function (raw) {
+                    return JSON.parse(raw);
+                  })
+                  .then(
+                    function (result) {
+                      return stage.cleanup().then(function () {
+                        return result;
+                      });
+                    },
+                    function (error) {
+                      return stage.cleanup().then(function () {
+                        throw error;
+                      });
+                    }
+                  );
+              });
+          });
         });
     });
 }
@@ -346,12 +426,16 @@ function run(args, deps) {
           );
         }
         checked('python-runtime', 'pass');
+        if (/^no-root-(?:start|status|resume)$/.test(request.action))
+          return withNoRootStage(deps, state, request.action.slice(8), request);
         boundary = 'installer-staging';
         return deps.runtime
           .stage(
             state,
-            !request.resume &&
-              ['inspect', 'install', 'remove'].indexOf(request.action) >= 0
+            request.action === 'inspect'
+              ? 'inspection'
+              : !request.resume &&
+                  ['install', 'remove'].indexOf(request.action) >= 0
           )
           .then(function (stage) {
             checked('installer-staging', 'pass');
@@ -407,13 +491,21 @@ function run(args, deps) {
                       ? 'pass'
                       : 'unknown'
                 );
-                return inspectEdition(
-                  result,
-                  stage,
-                  state.python,
-                  deps.execute,
-                  evidence
-                );
+                if (stage.noRoot && !result.active_operation) {
+                  return noRootAction(deps, state, stage, 'status').then(
+                    function (alternative) {
+                      if (alternative.state !== 'unknown') return alternative;
+                      return inspectEdition(
+                        result,
+                        stage,
+                        state,
+                        deps,
+                        evidence
+                      );
+                    }
+                  );
+                }
+                return inspectEdition(result, stage, state, deps, evidence);
               })
               .then(
                 function (result) {

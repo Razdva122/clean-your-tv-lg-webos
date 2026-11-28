@@ -1,10 +1,10 @@
 {
-  "release": "1.29.1",
-  "cytv": "0.24.3",
-  "home": "1.22.0",
-  "helper": "0.11.0",
-  "root": "0.25.0",
-  "updater": "0.6.8",
-  "android": "0.23.3",
-  "android_version_code": 56
+  "release": "1.30.0",
+  "cytv": "0.25.0",
+  "home": "1.23.0",
+  "helper": "0.11.1",
+  "root": "0.26.0",
+  "updater": "0.6.9",
+  "android": "0.23.4",
+  "android_version_code": 57
 }

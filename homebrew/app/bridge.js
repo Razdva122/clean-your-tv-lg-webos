@@ -32,6 +32,9 @@
   var grammar = {
     inspect: /^(--prepare-supervisor)?$/,
     'prepare-runtime': /^$/,
+    'no-root-start': /^--operation [a-f0-9]{32} --candidate [a-f0-9]{64}$/,
+    'no-root-status': /^--operation [a-f0-9]{32}$/,
+    'no-root-resume': /^--operation [a-f0-9]{32}$/,
     restore: /^$/,
     activate: /^$/,
     status: /^--operation [a-f0-9]{32} --verify-current$/,
@@ -101,7 +104,9 @@
             }
             if (reply.returnValue === false) {
               finish(
-                action === 'status' || action === 'homebrew-remove-status'
+                action === 'status' ||
+                  action === 'homebrew-remove-status' ||
+                  action === 'no-root-status'
                   ? 'status_unavailable'
                   : 'installer_unavailable'
               );
@@ -185,6 +190,15 @@
     },
     start: function (value) {
       return submission('install', value);
+    },
+    startNoRoot: function (value) {
+      return submission('no-root-start', value);
+    },
+    noRootStatus: function (operation) {
+      return cleanup('no-root-status', operation);
+    },
+    resumeNoRoot: function (operation) {
+      return cleanup('no-root-resume', operation);
     },
     status: function (operation) {
       return Promise.resolve().then(function () {

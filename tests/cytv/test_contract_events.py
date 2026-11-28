@@ -135,6 +135,11 @@ class ResourceDeliveryTests(unittest.TestCase):
         build=runpy.run_path(str(ROOT/'scripts/build-cytv.py'))
         with tempfile.TemporaryDirectory() as tmp:
             project=Path(tmp)
+
+            def payload_build(*, single_tile):
+                self.assertFalse(single_tile)
+                return nullcontext(project/'payload')
+
             def run(command, **kwargs):
                 if 'PyInstaller' in command:
                     specs=[command[i+1] for i,v in enumerate(command) if v=='--add-data']
@@ -142,7 +147,7 @@ class ResourceDeliveryTests(unittest.TestCase):
                     staged=Path(spec.rsplit(os.pathsep,1)[0])
                     for name in tv_sources.NAMES:
                         self.assertEqual((staged/(name+'.js')).read_bytes(),tv_sources.trusted_source(name).encode())
-            with patch.dict(build['main'].__globals__, {'ROOT':project,'_payload_build':lambda:nullcontext(project/'payload')}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
+            with patch.dict(build['main'].__globals__, {'ROOT':project,'_payload_build':payload_build}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
                 build['main']()
 
 class EventBoundaryTests(unittest.TestCase):

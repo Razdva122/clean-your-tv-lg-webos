@@ -17,6 +17,7 @@ const languages = {
 };
 const words = {
   'cs': {
+    'privacyGuide': 'Otevřít průvodce ochranou soukromí',
     removalConnection: 'Zkontrolujte připojení k TV a pokračujte v odebrání',
     'tryAgain': 'Zkusit znovu',
     'removalPending': 'Odebrání ještě není dokončeno.',
@@ -219,6 +220,7 @@ const words = {
       'Ověření balíčků, zpětná kontrola spuštění a vaše pozorování tlačítka Home jsou samostatné výsledky.'
   },
   'ru': {
+    'privacyGuide': 'Открыть руководство по конфиденциальности',
     removalConnection: 'Проверьте подключение к ТВ, чтобы продолжить удаление',
     'tryAgain': 'Попробовать снова',
     'removalPending': 'Удаление ещё не завершено.',
@@ -419,6 +421,7 @@ const words = {
       'Проверка пакетов, состояние запуска и ваше наблюдение за Home — разные результаты.'
   },
   'en': {
+    'privacyGuide': 'Open privacy guide',
     removalConnection: 'Check the TV connection to continue removal',
     'tryAgain': 'Try again',
     'removalPending': 'Removal is not finished yet.',
@@ -618,6 +621,7 @@ const words = {
       'Package verification, startup readback and your Home-button observation are separate results.'
   },
   'de': {
+    'privacyGuide': 'Datenschutzanleitung öffnen',
     removalConnection: 'TV-Verbindung prüfen, um die Entfernung fortzusetzen',
     'tryAgain': 'Erneut versuchen',
     'removalPending': 'Die Entfernung ist noch nicht abgeschlossen.',
@@ -825,6 +829,7 @@ const words = {
       'Paketprüfung, Startprüfung und Ihre Home-Beobachtung sind getrennte Ergebnisse.'
   },
   'fr': {
+    'privacyGuide': 'Ouvrir le guide de confidentialité',
     removalConnection:
       'Vérifiez la connexion du téléviseur pour poursuivre la suppression',
     'tryAgain': 'Réessayer',
@@ -1033,6 +1038,7 @@ const words = {
       'Vérification des paquets, démarrage et votre observation de Home sont des résultats distincts.'
   },
   'it': {
+    'privacyGuide': 'Apri la guida alla privacy',
     removalConnection:
       'Controlla la connessione TV per continuare la rimozione',
     'tryAgain': 'Riprova',
@@ -1237,6 +1243,7 @@ const words = {
       'Verifica pacchetti, avvio e tua osservazione di Home sono risultati separati.'
   },
   'es': {
+    'privacyGuide': 'Abrir la guía de privacidad',
     removalConnection:
       'Comprueba la conexión del TV para continuar la eliminación',
     'tryAgain': 'Intentar de nuevo',
@@ -1441,6 +1448,7 @@ const words = {
       'La verificación de paquetes, el inicio y tu observación de Home son resultados separados.'
   },
   'pt-BR': {
+    'privacyGuide': 'Abrir o guia de privacidade',
     removalConnection: 'Verifique a conexão da TV para continuar a remoção',
     'tryAgain': 'Tentar novamente',
     'removalPending': 'A remoção ainda não terminou.',
@@ -1646,6 +1654,7 @@ const words = {
       'Verificação de pacotes, inicialização e sua observação de Home são resultados separados.'
   },
   'pl': {
+    'privacyGuide': 'Otwórz poradnik prywatności',
     removalConnection: 'Sprawdź połączenie z TV, aby kontynuować usuwanie',
     'tryAgain': 'Spróbuj ponownie',
     'removalPending': 'Usuwanie nie zostało jeszcze zakończone.',
@@ -1848,6 +1857,7 @@ const words = {
       'Weryfikacja pakietów, odczyt startu i Twoja obserwacja Home to osobne wyniki.'
   },
   'ko': {
+    'privacyGuide': '개인정보 보호 가이드 열기',
     removalConnection: '제거를 계속하려면 TV 연결을 확인하세요',
     'tryAgain': '다시 시도',
     'removalPending': '제거가 아직 완료되지 않았습니다.',
@@ -2040,6 +2050,7 @@ const words = {
       '패키지 검증, 시작 확인, Home 버튼 관찰은 별도의 결과입니다.'
   },
   'hi': {
+    'privacyGuide': 'गोपनीयता गाइड खोलें',
     removalConnection: 'हटाना जारी रखने के लिए TV का कनेक्शन जाँचें',
     'tryAgain': 'फिर कोशिश करें',
     'removalPending': 'हटाना अभी पूरा नहीं हुआ है।',
@@ -2229,6 +2240,7 @@ const words = {
       'पैकेज सत्यापन, प्रारंभ जाँच और आपका Home अवलोकन अलग परिणाम हैं।'
   },
   'zh-Hans': {
+    'privacyGuide': '打开隐私指南',
     removalConnection: '检查电视连接以继续卸载',
     'tryAgain': '重试',
     'removalPending': '移除尚未完成。',
@@ -2403,6 +2415,7 @@ const words = {
     'tvChecksDesc': '软件包验证、启动状态回读和您的 Home 按钮观察是不同结果。'
   },
   'zh-Hant': {
+    'privacyGuide': '開啟隱私指南',
     removalConnection: '檢查電視連線以繼續解除安裝',
     'tryAgain': '重試',
     'removalPending': '移除尚未完成。',

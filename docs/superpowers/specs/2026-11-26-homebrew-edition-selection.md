@@ -34,7 +34,17 @@ The offline payload contains Root, Root Updater, System Updater and the runtime.
 
 The current TV package exports no complete No-root admission, first-pair, install or recovery operation. Implementing the capability judgment and honest status screens is feasible independently. A selectable installation requires the payload, supported pairing flow, edition-aware lifecycle and acceptance above. Keep access denied or unverified at the existing prerequisite screen and preserve its saved request ID. The design requires no new general command interface or changes to Homebrew permissions.
 
-The development implementation now runs the shared read-only Home classifier on fresh setup and after verified clean removal. It points to the computer or Android installer when a supported Root backend is available only there, or when Root Home is positively unavailable and external setup can check No-root. An inconclusive reading exposes only status and guidance. On old Node runtimes the fixed bootstrap can report the Node prerequisite before loading the modern runtime. The local No-root action remains unavailable. The Helper's inventory reader requires a previously registered controller, and a supported owner-approved first registration originating on the TV has yet to be established. [Local classifier](../../../homebrew/edition.py) · [Controller registration](../../../cytv/tv.py)
+The development implementation runs the shared Home classifier before a fresh
+setup. It opens the No-root review only after the local worker verifies
+the fallback packages, graphics, product state, storage and pairing
+prerequisites. It pairs through the genuine webOS request and passes the private
+result to the existing No-root package observer. A completed Root removal can
+transfer to the same worker through its exact original handoff. On older Node
+runtimes or when a supported Root backend is only available externally, follow
+the displayed computer or Android guidance. Readiness and hardware evidence
+are tracked against the exact package in the Homebrew acceptance record.
+[Local worker](../../../homebrew/no_root.py) · [Pairing](../../../homebrew/pairing.py)
+· [Device acceptance](../../development/HOMEBREW-INSTALL-ACCEPTANCE.md)
 
 ## One confirmation for Root installation and activation
 

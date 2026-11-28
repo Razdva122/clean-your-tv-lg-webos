@@ -21,6 +21,30 @@ GROUPS = (
         ('sportsAlarm', 'general', 'Turn off sports notifications', 'off'),
     )),
 )
+
+# Stable manual-guide anchors, including the optional log upload switches.
+GUIDE_SECTIONS = {
+    'homePromotion': 'home-promotions',
+    'contentRecommendation': 'home-promotions',
+    'screenSaverAd': 'screensaver',
+    'livePromotion': 'live-promotions',
+    'promotionStreamer': 'live-promotions',
+    'webOSPromotionVideo': 'live-promotions',
+    'livePlus': 'viewing',
+    'adCookie': 'advertising',
+    'lmt': 'advertising',
+    'aiNudge': 'tips',
+    'sportsAlarm': 'sports',
+    'dbgLogUpload': 'log-uploads',
+    'faultLogUpload': 'log-uploads',
+}
+
+
+def guide_section(key, status):
+    if status in ('write-rejected', 'firmware-blocked', 'restore-rejected'):
+        return GUIDE_SECTIONS.get(key)
+
+
 SETTINGS = {
     key: (category, label, target)
     for _, rows in GROUPS for key, category, label, target in rows

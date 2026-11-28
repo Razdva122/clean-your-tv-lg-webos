@@ -13,6 +13,9 @@ Start with a task. You do not need the developer reports to install or use Clean
 | Browse or create themes | [Theme catalog and author tools](THEMES.md) |
 | Contribute a theme to Showcase | [Author contribution walkthrough](development/CONTRIBUTING-THEMES.md) |
 | Arrange or hide apps | [App management](APP-MANAGEMENT.md) |
+| Adjust LG privacy settings with the remote | [Menus by LG generation](PRIVACY.md) |
+| Filter ad and tracking domains without root | [DNS setup, verification and undo](PRIVACY-DNS.md) |
+| See which services CYTV contacts | [CYTV network activity](CYTV-NETWORK.md) |
 | Update, disable or uninstall | [Maintenance](MAINTENANCE.md) |
 | Recover from a failed setup or lost Home control | [Recovery](RECOVERY.md) |
 | Report an installation result | [Problems and successful installations](FEEDBACK.md) |
