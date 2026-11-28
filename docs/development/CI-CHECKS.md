@@ -156,7 +156,14 @@ durations include hook overhead; nested module teardown is subtracted from modul
 setup to avoid double counting. Discovery and dependency installation are outside
 the reported execution time. Repeated imported tests are preserved.
 
-Reproduce the report locally with the project Python environment:
+The Intel macOS desktop job runs partitions 1/2 and 2/2 concurrently on its
+build runner using separate checkouts of the committed source and copies of the
+installed npm dependencies. Each writes its own timing JSON. Both must pass
+before the job can record the single `installer-host` unit or start packaging. A matching
+authenticated receipt skips both partitions. Reproduce this step with
+`QT_QPA_PLATFORM=offscreen PYTHON=.venv-cytv/bin/python bash scripts/test-intel-installer.sh build/test-timings`.
+
+Reproduce an individual timing report with the project Python environment:
 
 ```sh
 QT_QPA_PLATFORM=offscreen .venv-cytv/bin/python scripts/test-shard.py \
