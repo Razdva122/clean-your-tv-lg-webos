@@ -364,7 +364,6 @@ class Tests(unittest.TestCase):
         siblings={p:p.read_bytes() for p in (self.root/'theme-receiver-permissions.json',self.root/'wallpaper-media-permissions.json',self.snapshot,*self.paths.values())}
         self.weather()
         raw=(ROOT/'root-edition/runtime/cli.py').read_text();tree=ast.parse(raw)
-        node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='execute')
         events=[]
         def suspend(*args):events.append('suspend');return 'restored'
         def access(**kw):
@@ -373,7 +372,9 @@ class Tests(unittest.TestCase):
             return self.weather(False)
         gate=types.SimpleNamespace(execute=lambda *args:suspend())
         ns={'d':types.SimpleNamespace(STATE=self.root,EXPECTED_UID=os.getuid()),'os':os,'gate_backend':lambda:gate,'firmware_access':access}
-        exec(ast.get_source_segment(raw,node),ns)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name in ('execute', 'domain_blocking'):
+                exec(ast.get_source_segment(raw, node), ns)
         self.assertEqual(ns['execute']('suspend-update','a'*32),'restored')
         self.assertEqual(self.manifest.read_bytes(),before)
         self.assertFalse((self.root/'permissions/weather.api.json').exists())
