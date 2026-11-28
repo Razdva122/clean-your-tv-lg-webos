@@ -115,6 +115,21 @@ arrived. Leave ongoing entries open. Log each rebuild and retest as a new row,
 including failed and cancelled attempts. Link the relevant CI run, test evidence
 or fix when available.
 
+When the selected cases need the project C3 or another project TV, plan the
+device window when dispatching CI. Use recent comparable build and audit times
+to estimate when the candidate will be ready. Record the expected window and
+case IDs in the timing log. Confirm availability with the owner only if the
+existing arrangement leaves it unclear. Group physical actions that require
+the owner and run authorized network-remote checks yourself. If matching
+evidence covers every device case, record its reference and skip the window.
+
+Record the actual time the selected artifact became available, the time its
+audit finished, when the device became available and when device checks began.
+The audit and the wait for the TV can overlap. Attribute an owner wait only
+when a request and its response establish the interval. A planned window is an
+estimate. Start final device checks once the build is pinned, its artifact
+verified and the authorized device window open.
+
 Keep earlier candidates in the PR. When a new candidate supersedes one, identify
 each by its RC number or commit and record when the earlier one ended. Preserve
 the original handoff timestamp across candidates for the same release task.
