@@ -169,6 +169,8 @@ var restarts = [],
 // on IR Home. Use its foreground signal when available, with a delayed fallback
 // and bounded recovery when LG's queued launch takes foreground back (#687).
 var IR_HOME_DELAY = 700;
+// Live TV can report LG Home after the usual fallback has fired (#818).
+var IR_LIVE_TV_HOME_DELAY = 3000;
 var homeCloseState = 'idle',
   homeCloseWaiters = [],
   terminalUI = false,
@@ -1399,10 +1401,15 @@ function start(recovering) {
           lastLaunch: monotonic(),
           homeSeen: false
         };
-        irHomeTimer = setTimeout(function () {
-          irHomeTimer = null;
-          if (child === worker && ready && !stopping) openHome(worker);
-        }, IR_HOME_DELAY);
+        irHomeTimer = setTimeout(
+          function () {
+            irHomeTimer = null;
+            if (child === worker && ready && !stopping) openHome(worker);
+          },
+          lastForeground === 'com.webos.app.livetv'
+            ? IR_LIVE_TV_HOME_DELAY
+            : IR_HOME_DELAY
+        );
       }
     }
   });
