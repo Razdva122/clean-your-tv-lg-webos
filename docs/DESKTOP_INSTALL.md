@@ -279,6 +279,8 @@ changes the selected LG settings. If the installer reports an unresolved
 operation, use **Review recovery options** with the original saved connection
 first.
 
+If LG rejects a setting, open the privacy guide from the result to find the matching step for your TV. You can also [look up the remote-control menus by generation](PRIVACY.md).
+
 When this connection has saved original values, select a setting to restore it individually. The installer previews the change and verifies the result. Select **Adjust LG settings (Debloat)** to apply new changes instead.
 
 ## Finish a Root rollback

@@ -79,7 +79,13 @@ class HomebrewDebloatTests(unittest.TestCase):
             return self.invoke(uri, payload, timeout)
         reply = debloat.run('debloat', ['lmt'], self.owner, self.device, rejected)
         self.assertEqual(reply['results'], {'lmt': 'write-rejected'})
+        self.assertEqual(reply['settings']['lmt']['guide'], 'advertising')
+        self.assertNotIn('guide', failed['settings']['promotionStreamer'])
         self.assertEqual(self.values['lmt'], 'off')
+        self.run_action('debloat', 'lmt')
+        restored = debloat.run('debloat-restore', ['lmt'], self.owner, self.device, rejected)
+        self.assertEqual(restored['results'], {'lmt': 'restore-rejected'})
+        self.assertEqual(restored['settings']['lmt'], {'value': 'on', 'saved': True, 'guide': 'advertising'})
 
     def test_busy_or_incomplete_product_cannot_change_settings(self):
         with self.owner._lock(create=False):
