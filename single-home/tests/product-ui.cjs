@@ -78,7 +78,7 @@ const apps = [
                 credentialsReady: true,
                 paired,
                 pairing: false,
-                startup: 'off',
+                startup: paired ? 'pending' : 'off',
                 bootObserved: false
               };
             } else if (uri === service + 'pair' && args.confirm === true) {

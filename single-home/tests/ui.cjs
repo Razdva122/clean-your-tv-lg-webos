@@ -61,11 +61,23 @@ const home = origin + '/index.html';
                   reply({ returnValue: true, paired: true });
                 return;
               }
+              if (!fixture.paired && fixture.startup === 'off')
+                window.patchState({
+                  startup: 'pending',
+                  startupNeedsRetry: !!window.failStartup
+                });
               window.patchState({ paired: true });
-              return reply({ returnValue: true, paired: true });
+              return reply({
+                returnValue: true,
+                paired: true,
+                startupNeedsRetry: fixture.startupNeedsRetry
+              });
             }
             if (method === 'enable') {
-              window.patchState({ startup: 'pending' });
+              window.patchState({
+                startup: 'pending',
+                startupNeedsRetry: false
+              });
               if (window.holdEnable) {
                 window.lateEnable = () =>
                   reply({ returnValue: true, startup: 'pending' });
@@ -112,6 +124,7 @@ const home = origin + '/index.html';
     assert.match(await el('pair').textContent(), /телевизор|сопряж/i);
     assert.equal(await page.locator('#appGrid, #editLayout').count(), 0);
     assert.equal(await el('startupArea').isVisible(), false);
+    assert.match(await el('pairStatus').textContent(), /при включении ТВ/);
     const preview = process.env.PILOT_PREVIEW_DIR;
     if (preview) {
       fs.mkdirSync(preview, { recursive: true });
@@ -174,6 +187,12 @@ const home = origin + '/index.html';
       (await calls('pair')).map((c) => c.args),
       Array(4).fill({ confirm: true })
     );
+    assert.match(await el('startupStatus').textContent(), /подтверждения/);
+    await el('stop').click();
+    await el('pairAgain').click();
+    await page.waitForURL(home);
+    await page.goto(setup + '?settings=1');
+    assert.match(await el('startupStatus').textContent(), /останов/i);
     await page.evaluate(() => (window.holdEnable = true));
     await el('enableStartup').click();
     assert(await el('stop').isVisible());
@@ -186,7 +205,7 @@ const home = origin + '/index.html';
       (await calls('enable')).map((c) => c.args),
       [{ confirm: true }]
     );
-    assert.equal((await calls('disable')).length, 1);
+    assert.equal((await calls('disable')).length, 2);
     if (preview)
       await page.screenshot({ path: path.join(preview, 'settings.png') });
     await page.keyboard.press('Escape');
@@ -206,14 +225,31 @@ const home = origin + '/index.html';
     await page.goto(setup + '?settings=1');
     assert(await el('pair').isDisabled());
     await el('probe').click();
-    assert.equal((await calls('pair')).length, 4);
+    assert.equal((await calls('pair')).length, 5);
     assert(await el('enableStartup').isEnabled());
     await el('enableStartup').click();
     await el('stop').click();
-    assert.equal((await calls('disable')).length, 2);
+    assert.equal((await calls('disable')).length, 3);
     await el('back').click();
     await page.waitForURL((url) => url.pathname === '/index.html');
     assert.equal((await calls('catalog')).length, 0);
+    await page.evaluate(() =>
+      window.patchState({
+        startup: 'off',
+        paired: false,
+        credentialsReady: true
+      })
+    );
+    await page.goto(setup);
+    await page.evaluate(() => {
+      window.failStartup = true;
+    });
+    await el('pair').click();
+    await el('enableStartup').waitFor();
+    assert.match(await el('startupStatus').textContent(), /ещё раз/);
+    await el('enableStartup').click();
+    assert.match(await el('startupStatus').textContent(), /подтверждения/);
+    assert.equal((await calls('pair')).length, 6);
     const offlinePage = await browser.newPage({ locale: 'en-US' });
     offlinePage.setDefaultTimeout(4500);
     offlinePage.on('pageerror', (e) => errors.push(e.message));
@@ -238,7 +274,7 @@ const home = origin + '/index.html';
     await offlinePage.waitForURL(home + '?skipSetup=1');
     assert.deepEqual(errors, []);
     console.log(
-      'PASS single Home setup navigation, LG refusal and cancellation, explicit repair, independent startup and Stop, private-storage gate and preserved layout'
+      'PASS single Home setup navigation, LG refusal and cancellation, explicit repair, first-pair startup and persistent Stop, private-storage gate and preserved layout'
     );
   } finally {
     await browser.close();

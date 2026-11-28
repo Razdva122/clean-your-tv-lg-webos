@@ -93,6 +93,7 @@ function fixture() {
     invoke,
     tick,
     calls,
+    svc,
     ready: () => (ready = true),
     writeCredential: (writer) => {
       store.write = writer;
@@ -118,7 +119,7 @@ test('only the packaged UI can act; probe and status expose no secrets', async (
   );
   f.ready();
   assert.equal((await f.invoke('pair', { confirm: true })).paired, true);
-  assert.equal(f.state().startup, 'off');
+  assert.equal(f.state().startup, 'pending');
   assert(!JSON.stringify(await f.invoke('status')).includes('private'));
 });
 test('decline and cancel preserve older verified pairing; catalog limited to same package', async () => {
@@ -256,4 +257,110 @@ test('an indeterminate pairing write retains its safe diagnostic during cancella
     storageIssue: 'storage-credential-write-indeterminate'
   });
   assert.equal((await cancel).cancelled, true);
+});
+
+test('only the first confirmed and saved pairing registers startup', async () => {
+  const f = fixture();
+  f.ready();
+  const pair = () => f.invoke('pair', { confirm: true });
+  f.pair(async () => {
+    throw Error('pairing-declined');
+  });
+  assert.equal((await pair()).errorCode, 'pairing-declined');
+  assert.equal(f.state().startup, 'off');
+  assert.equal(f.calls.length, 0);
+  f.pair(async () => ({ key: 'accepted' }));
+  assert.equal((await pair()).paired, true);
+  const gen = f.state().generation;
+  assert.equal(f.state().startup, 'pending');
+  assert.equal(f.state().activityId, 31);
+  await pair();
+  assert.equal(f.state().generation, gen);
+  await f.tick(gen);
+  f.time(9000);
+  await f.tick(gen);
+  assert.equal(f.state().startup, 'enabled');
+  await f.invoke('disable');
+  await pair();
+  assert.equal((await f.invoke('status')).startup, 'stopped');
+  assert.equal(f.calls.filter(([uri]) => uri.endsWith('/create')).length, 1);
+});
+test('existing pairing with startup off and explicit Stop before pairing retain their preferences', async () => {
+  for (const [key, startup] of [
+    ['legacy', 'off'],
+    [null, 'stopped']
+  ]) {
+    const f = fixture();
+    f.ready();
+    Object.assign(f.state(), { key, startup });
+    assert.equal((await f.invoke('pair', { confirm: true })).paired, true);
+    assert.equal(f.state().startup, startup);
+    assert.equal(f.calls.length, 0);
+  }
+});
+test('scheduler failure keeps pairing usable and exposes a retry without another LG prompt', async () => {
+  const f = fixture();
+  f.ready();
+  const call = f.svc.call;
+  f.svc.call = (_uri, _args, cb) => cb({ payload: { returnValue: false } });
+  assert.equal((await f.invoke('pair', { confirm: true })).paired, true);
+  assert.equal((await f.invoke('status')).startupNeedsRetry, true);
+  assert.equal((await f.invoke('catalog')).returnValue, true);
+  f.svc.call = call;
+  assert.equal(
+    (await f.invoke('enable', { confirm: true })).startup,
+    'pending'
+  );
+  assert.equal((await f.invoke('status')).startupNeedsRetry, false);
+});
+
+test('cancel during first credential commit restores both the credential and startup preference', async () => {
+  const f = fixture();
+  f.ready();
+  let started, resume;
+  const writing = new Promise((resolve) => {
+    started = resolve;
+  });
+  f.writeCredential(async (next) => {
+    Object.assign(f.state(), next);
+    if (next.key) {
+      started();
+      await new Promise((resolve) => {
+        resume = resolve;
+      });
+    }
+  });
+  const pair = f.invoke('pair', { confirm: true });
+  await writing;
+  const cancel = f.invoke('cancelPair');
+  resume();
+  assert.equal((await pair).errorCode, 'cancelled');
+  await cancel;
+  assert.equal(f.state().key, null);
+  assert.equal(f.state().startup, 'off');
+  assert.equal(f.calls.length, 0);
+});
+test('Stop wins while first-pair activity registration is in flight', async () => {
+  const f = fixture();
+  f.ready();
+  let started, reply;
+  const creating = new Promise((resolve) => {
+    started = resolve;
+  });
+  const call = f.svc.call;
+  f.svc.call = (uri, args, cb) => {
+    if (uri.endsWith('/create')) {
+      started();
+      reply = cb;
+    } else call(uri, args, cb);
+  };
+  const pair = f.invoke('pair', { confirm: true });
+  await creating;
+  const generation = f.state().generation;
+  const stop = f.invoke('disable');
+  reply({ payload: { returnValue: true, activityId: 31 } });
+  assert.equal((await pair).paired, true);
+  assert.equal((await stop).startup, 'stopped');
+  assert.equal((await f.tick(generation)).returnValue, false);
+  assert.equal(f.state().activityId, null);
 });

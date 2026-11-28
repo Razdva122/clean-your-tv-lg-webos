@@ -171,6 +171,7 @@ module.exports = function (service, storage, inventory, clock) {
           r.paired = s.paired === true;
           r.pairing = !!pairing;
           r.startup = s.startup;
+          r.startupNeedsRetry = s.startup === 'pending' && !s.activityId;
           r.bootObserved = !!(
             s.startup === 'enabled' &&
             s.receipt &&
@@ -205,14 +206,31 @@ module.exports = function (service, storage, inventory, clock) {
         return serialized(function () {
           return storage.read().then(function (s) {
             if (!current()) reject('cancelled');
-            var before = s.key;
-            s.key = profile.key;
-            return storage.write(s).then(function () {
-              if (current()) return { paired: true };
-              s.key = before;
-              return storage.write(s).then(function () {
-                reject('cancelled');
-              });
+            var expected = epoch;
+            var first = s.key === null && s.startup === 'off';
+            var next = Object.assign({}, s, { key: profile.key });
+            if (first) prepareStartup(next);
+            // Commit the credential and the first-pair startup intent together.
+            return storage.write(next).then(function () {
+              if (!current()) {
+                return storage.write(s).then(function () {
+                  reject('cancelled');
+                });
+              }
+              pairing = null;
+              if (!first) return { paired: true };
+              return registerStartup(next, expected).then(
+                function () {
+                  return { paired: true };
+                },
+                // The credential is usable even if the scheduler is unavailable.
+                function () {
+                  return {
+                    paired: true,
+                    startupNeedsRetry: expected === epoch
+                  };
+                }
+              );
             });
           });
         });
@@ -253,6 +271,24 @@ module.exports = function (service, storage, inventory, clock) {
         });
       });
   });
+  function prepareStartup(s) {
+    s.generation = boot.generation();
+    s.startup = 'pending';
+    s.activityId = null;
+    s.receipt = null;
+  }
+  function registerStartup(s, expected) {
+    function current() {
+      return expected === epoch;
+    }
+    return boot.create(service, s.generation, current).then(function (id) {
+      s.activityId = id;
+      return writeBoot(s).then(function () {
+        if (!current()) reject('cancelled');
+        return { startup: 'pending' };
+      });
+    });
+  }
   owner('enable', function (p) {
     if (p.confirm !== true) reject('invalid-request');
     var expected = epoch;
@@ -264,24 +300,10 @@ module.exports = function (service, storage, inventory, clock) {
           (s.startup === 'pending' && s.activityId)
         )
           return { startup: s.startup };
-        s.generation = boot.generation();
-        s.startup = 'pending';
-        s.activityId = null;
-        s.receipt = null;
-        return writeBoot(s)
-          .then(function () {
-            if (expected !== epoch) reject('cancelled');
-            return boot.create(service, s.generation, function () {
-              return expected === epoch;
-            });
-          })
-          .then(function (id) {
-            s.activityId = id;
-            return writeBoot(s).then(function () {
-              if (expected !== epoch) reject('cancelled');
-              return { startup: 'pending' };
-            });
-          });
+        prepareStartup(s);
+        return writeBoot(s).then(function () {
+          return registerStartup(s, expected);
+        });
       });
     });
   });

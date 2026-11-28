@@ -12,6 +12,14 @@
       'Разрешите доступ к списку приложений этого телевизора. Телевизор запросит подтверждение.',
       'Allow access to this TV’s app list. The TV will ask you to confirm.'
     ],
+    firstStartup: [
+      'После подтверждения Home покажет приложения и будет запускать службу при включении ТВ. Автозапуск можно выключить в настройках Home.',
+      'After you approve, Home will show your apps and start its service when the TV turns on. You can turn this off in Home settings.'
+    ],
+    retryStartup: [
+      'ТВ не подтвердил регистрацию службы. Попробуйте включить фоновый запуск ещё раз.',
+      'The TV did not confirm registration. Try starting the service again.'
+    ],
     waiting: [
       'Ответьте на запрос сопряжения на экране телевизора.',
       'Respond to the pairing request on the TV.'
@@ -238,7 +246,12 @@
     show('back', settings && !active);
     el('notice').textContent = notice ? t(notice) : '';
     label('pairHeading', paired ? 'paired' : 'connect');
-    label('pairStatus', active ? 'waiting' : paired ? 'pairedInfo' : 'first');
+    var firstPrompt =
+      state && state.startup === 'off' ? 'firstStartup' : 'first';
+    label(
+      'pairStatus',
+      active ? 'waiting' : paired ? 'pairedInfo' : firstPrompt
+    );
     show('pair', !paired && !active && !retryPair);
     el('pair').disabled = !allowed() || checking;
     show('pairAgain', paired && !active && !retryPair);
@@ -262,11 +275,14 @@
     show('startupArea', settings && !!state);
     if (state) {
       el('startupStatus').textContent =
-        t(state.startup) + (state.bootObserved === true ? ' ' + t('boot') : '');
+        t(state.startupNeedsRetry ? 'retryStartup' : state.startup) +
+        (state.bootObserved === true ? ' ' + t('boot') : '');
       show(
         'enableStartup',
         !changingStartup &&
-          (state.startup === 'off' || state.startup === 'stopped')
+          (state.startup === 'off' ||
+            state.startup === 'stopped' ||
+            state.startupNeedsRetry)
       );
       el('enableStartup').disabled =
         !state.storageReady || active || !!changingStartup;
@@ -304,7 +320,8 @@
     if (
       !state ||
       document.hidden ||
-      (state.startup !== 'pending' && !state.pairing)
+      ((state.startup !== 'pending' || state.startupNeedsRetry) &&
+        !state.pairing)
     )
       return;
     if (!pollUntil) pollUntil = Date.now() + (state.pairing ? 80000 : 45000);
@@ -337,13 +354,18 @@
         storageReady: r.storageReady,
         credentialsReady: r.credentialsReady,
         startup: r.startup,
+        startupNeedsRetry: r.startupNeedsRetry === true,
         bootObserved: r.bootObserved === true
       };
       if (!settings && state.paired && !state.pairing && allowed()) {
         goHome(false);
         return;
       }
-      if (state.startup !== 'pending' && !state.pairing) pollUntil = 0;
+      if (
+        (state.startup !== 'pending' || state.startupNeedsRetry) &&
+        !state.pairing
+      )
+        pollUntil = 0;
       render();
       poll();
       if (
@@ -398,6 +420,12 @@
           return;
         }
         notice = '';
+        if (r.startupNeedsRetry === true) {
+          settings = true;
+          repairRequested = false;
+          refresh(true);
+          return;
+        }
         goHome(false);
       },
       80000
