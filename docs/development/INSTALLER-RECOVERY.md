@@ -52,6 +52,13 @@ residue, absent project apps and checked controls/registrations. A same-boot ret
 does not establish this exception. The existing durable kernel-change field is
 kept across interrupted verified-clean completion, including service-only residue.
 
+The same attempt can obtain missing package terminals after its verified restart.
+After package requests finish, cleanup re-reads the current catalog and recomputes
+terminal eligibility from the updated receipts before final process verification.
+It does not require another user retry merely to refresh the pre-removal snapshot.
+Outstanding package/configuration work, observed project processes and unchanged
+kernel identity do not gain permission from this refresh.
+
 An inherited install receipt, a closed cancellation observation, or historical
 installer directories do not by themselves defeat this terminal cleanup rule.
 Current package/configuration requests, original unsettled work and observed

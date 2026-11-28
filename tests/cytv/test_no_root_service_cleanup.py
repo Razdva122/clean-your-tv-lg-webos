@@ -28,7 +28,10 @@ class EF950ServiceCleanup(unittest.TestCase):
     def test_stalled_controller_after_install_is_stopped_by_package_manager(self):
         self.run_owned_service_cycle(package_runtimes=True, stalled_controller=True)
 
-    def run_owned_service_cycle(self, *, opaque=False, inherited=False, package_runtimes=False, stalled_controller=False):
+    def test_first_postboot_pass_completes_new_terminals_in_both_install_cycles(self):
+        self.run_owned_service_cycle(opaque=True, first_postboot=True)
+
+    def run_owned_service_cycle(self, *, opaque=False, inherited=False, package_runtimes=False, stalled_controller=False, first_postboot=False):
         from multiprocessing import Pipe
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         case = SimpleRemoval()
@@ -58,6 +61,12 @@ class EF950ServiceCleanup(unittest.TestCase):
             os.chown(helper_state, 5999, 5000)
             for service in services:
                 os.chown(base / 'services' / service, *service_owner)
+            if first_postboot:
+                history = case.root / 'developer/.cytv-installer/operations' / ('a' * 32)
+                history.mkdir(parents=True, exist_ok=True)
+                process = case.root / 'proc/987654'
+                process.mkdir(exist_ok=True)
+                (process / 'cmdline').write_bytes(b'/usr/bin/node\0-e\0opaque\0')
             if package_runtimes:
                 (helper_state / 'controller.log').write_text(json.dumps({
                     'event': 'start', 'pid': 987649, 'startupSchema': 1, 'generation': 'I' + 'a' * 32}) + '\n' +
@@ -119,8 +128,8 @@ class EF950ServiceCleanup(unittest.TestCase):
                     result = case.remove()
                     if opaque:
                         self.assertTrue(result['restart_required'])
-                        self.assertEqual(case.store.pending(case.profile)['removals'],
-                                         {app: 'terminal' for app in apps})
+                        self.assertEqual(case.store.pending(case.profile).get('removals', {}),
+                                         {} if first_postboot else {app: 'terminal' for app in apps})
                         from cytv import diagnostics
                         report = json.loads(diagnostics.create_report(case.store, 'uninstall', case.profile, 'uninstall').read_text())
                         evidence = report['removal']['restart_evidence']
@@ -138,6 +147,10 @@ class EF950ServiceCleanup(unittest.TestCase):
                         completed = case.store.diagnostic_removal['cleanup_restart_evidence']
                         self.assertTrue(completed['kernel_changed'])
                         self.assertEqual(completed['decision'], 'completed')
+                        if first_postboot:
+                            self.assertTrue(completed['all_targets_terminal'])
+                            self.assertTrue(completed['project_catalog_absent'])
+                            self.assertTrue(completed['allow_opaque'])
                     for service in services:
                         leaf = base / 'services' / service
                         self.assertEqual(list(leaf.iterdir()), [])

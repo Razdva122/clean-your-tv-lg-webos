@@ -1461,12 +1461,16 @@ def continue_removal(installer, expected_pending):
     if bound_package_pending and not original_package_settled and not targets.intersection(APPS):
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
-    terminal_cleanup = (guard and removals.get(APPS[0]) == 'terminal' and not submitted
-                            and not apps.intersection(APPS)
-                            and targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'}
-                            and not older_pending
-                            and (not configuration_pending or configuration_settled)
-                            and (not bound_package_pending or original_package_settled))
+    def terminal_cleanup_ready(catalog_apps):
+        return (guard and removals.get(APPS[0]) == 'terminal'
+                and not any(removals.get(app) == 'submitted' for app in APPS)
+                and not catalog_apps.intersection(APPS)
+                and targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'}
+                and not older_pending
+                and (not configuration_pending or configuration_settled)
+                and (not bound_package_pending or original_package_settled))
+
+    terminal_cleanup = terminal_cleanup_ready(apps)
     retained_cleanup_reboot = (terminal_cleanup and observed_new_kernel
                               and 'process-idle-unverified' in boot_triggers)
     record_restart(phase='before-stop', terminal_cleanup=terminal_cleanup,
@@ -1645,6 +1649,16 @@ def continue_removal(installer, expected_pending):
         observe_catalog(remaining_apps)
         if any(app in remaining_apps for app in APPS):
             raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
+    if guard:
+        # This pass may have obtained the missing terminals. Recompute from
+        # those receipts and a fresh catalogue before the final process check.
+        remaining_apps, _ = catalog()
+        terminal_cleanup = terminal_cleanup_ready(remaining_apps)
+        retained_cleanup_reboot = (terminal_cleanup and observed_new_kernel
+                                  and 'process-idle-unverified' in boot_triggers)
+        record_restart(terminal_cleanup=terminal_cleanup,
+                       all_targets_terminal=targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'},
+                       project_catalog_absent=not bool(remaining_apps.intersection(APPS)))
     # Vendor terminal must also retire a delegated package runtime before its
     # files are swept. A failed/partial vendor stop is never permission to unlink.
     process_phase = 'after-packages'
