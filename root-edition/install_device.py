@@ -1424,16 +1424,21 @@ class LocalDevice:
                 result.check_returncode()
             except subprocess.CalledProcessError as error:
                 if result.returncode == 1 and len(result.stdout) <= 4096:
-                    from installation import home_conflict_details
+                    from installation import cleanup_readback_details, home_conflict_details
                     try:
                         reply = json.loads(result.stdout)
                     except (ValueError, RecursionError):
                         reply = None
-                    if (isinstance(reply, dict) and reply.get('cleanup_error') == 'route-changed'
-                            and reply.get('operation') == record['operation'] and reply.get('removal') == record['removal']):
-                        detail = home_conflict_details(reply.get('home_conflict_paths'))
-                        if detail:
-                            error.home_conflict_paths = detail['home_conflict_paths']
+                    if (isinstance(reply, dict) and reply.get('operation') == record['operation']
+                            and reply.get('removal') == record['removal']):
+                        if reply.get('cleanup_error') == 'cleanup-readback-unavailable':
+                            detail = cleanup_readback_details(reply.get('cleanup_readback'))
+                            if detail:
+                                error.cleanup_readback = detail['cleanup_readback']
+                        elif reply.get('cleanup_error') == 'route-changed':
+                            detail = home_conflict_details(reply.get('home_conflict_paths'))
+                            if detail:
+                                error.home_conflict_paths = detail['home_conflict_paths']
                 raise
             return json.loads(result.stdout)['routes']
         option = ',retire_orphan=True' if retire_orphan else ''

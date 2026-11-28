@@ -440,12 +440,16 @@ class SSH:
                         from .errors import root_driver_details, root_restore_failure_details, root_beta_repair_details
                         reply=json.loads(b''.join(output))
                         if (cleanup_tail is not None and error.exit_status == 1 and isinstance(reply, dict)
-                                and (reply.get('operation'), reply.get('removal')) == cleanup_tail
-                                and reply.get('cleanup_error') == 'route-changed'):
-                            from .errors import home_conflict_details
-                            paths = home_conflict_details(reply.get('home_conflict_paths'))
-                            if paths:
-                                error.home_conflict_paths = paths['home_conflict_paths']
+                                and (reply.get('operation'), reply.get('removal')) == cleanup_tail):
+                            from .errors import cleanup_readback_details, home_conflict_details
+                            if reply.get('cleanup_error') == 'cleanup-readback-unavailable':
+                                detail = cleanup_readback_details(reply.get('cleanup_readback'))
+                                if detail:
+                                    error.cleanup_readback = detail['cleanup_readback']
+                            elif reply.get('cleanup_error') == 'route-changed':
+                                paths = home_conflict_details(reply.get('home_conflict_paths'))
+                                if paths:
+                                    error.home_conflict_paths = paths['home_conflict_paths']
                         if isinstance(reply,dict) and reply.get('returnValue') is False:
                             retry = reply.get('retained_retry_attempt')
                             if (set(reply) == {'returnValue', 'retained_retry_attempt'} and type(retry) is list

@@ -11,7 +11,7 @@ import unittest
 class CleanupChildren(unittest.TestCase):
     def run_reader(self, body):
         source=(Path(__file__).resolve().parents[1]/'cleanup_tail.js').read_text()
-        helper=source[source.index('function childRead('):source.index('async function rpc(')]
+        helper=source[source.index('function unavailable('):source.index('async function rpc(')]
         script="""var real=require('child_process'),children=[],cp={spawn:function(command,args,options){
 var child=real.spawn(command,args,options);children.push(child);return child;}};
 """+helper+"\n(async function(){"+body+"""
@@ -32,14 +32,21 @@ if(value!=='reply')throw Error('reply lost');
 
     def test_timeout_nonzero_launch_failure_and_output_limit_fail_closed(self):
         self.run_reader("""
-var cases=[['/missing-cytv-child',[],100,'cleanup-readback-unavailable'],
-[process.execPath,['-e','setInterval(function(){},1000);'],50,'cleanup-readback-unavailable'],
-[process.execPath,['-e',"process.stdout.write('private');process.exit(1);"],1000,'cleanup-readback-unavailable'],
+var cases=[['/missing-cytv-child',[],1000,'cleanup-readback-unavailable','client-start-failed'],
+[process.execPath,['-e','setInterval(function(){},1000);'],50,'cleanup-readback-unavailable','timeout'],
+[process.execPath,['-e',"process.stdout.write('private');process.exit(17);"],1000,'cleanup-readback-unavailable','client-exit'],
 [process.execPath,['-e',"process.stdout.write(Buffer.alloc(2097153));setInterval(function(){},1000);"],2000,'cleanup-readback-malformed'],
 [process.execPath,['-e',"process.stderr.write(Buffer.alloc(2097153));setInterval(function(){},1000);"],2000,'cleanup-readback-malformed']];
+if(process.platform!=='win32')
+ cases.push([process.execPath,['-e',"process.kill(process.pid, 'SIGTERM');"],1000,'cleanup-readback-unavailable','client-signal']);
 for(var i=0;i<cases.length;i++){
- var item=cases[i],error;
- try{await childRead(item[0],item[1],item[2]);}catch(value){error=value;}
+ var item=cases[i],error=null;
+ try{await childRead(item[0],item[1],item[2],'inputs-list');}catch(value){error=value;}
  if(!error||error.message!==item[3])throw Error('unverified child accepted');
+ if(item[4]){
+  var detail=error.cleanup_readback;
+  if(!detail||detail.check!=='inputs-list'||detail.reason!==item[4])throw Error('wrong readback detail '+item[4]);
+  if(item[4]==='client-exit'&&detail.exit_status!==17)throw Error('lost exit status');
+ }else if(error.cleanup_readback)throw Error('misclassified malformed output');
 }
 """)

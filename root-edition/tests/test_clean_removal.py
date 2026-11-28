@@ -734,6 +734,24 @@ class ConfinedCleanup(unittest.TestCase):
                 self.assertEqual(summary.get('home_conflict_paths'), expected)
                 self.assertNotIn('PRIVATE', str(summary))
 
+    def test_stock_proof_readback_error_survives_only_for_the_current_removal(self):
+        import json, subprocess
+        from install_device import LocalDevice
+        from install_driver import failure_summary
+        record = {'operation':'c' * 32, 'removal':'a' * 32}
+        detail = {'check':'key-filters', 'reason':'timeout'}
+        reply = dict(record, cleanup_error='cleanup-readback-unavailable',
+                     cleanup_readback=dict(detail, stderr='PRIVATE', error_code=42))
+        for changes, expected in [({}, detail), ({'operation':'f' * 32}, None),
+                                  ({'cleanup_readback':dict(detail, reason='PRIVATE')}, None)]:
+            with self.subTest(changes=changes):
+                result = subprocess.CompletedProcess(['node'], 1, json.dumps(dict(reply, **changes)).encode(), b'PRIVATE')
+                with patch('subprocess.run', return_value=result), self.assertRaises(subprocess.CalledProcessError) as caught:
+                    LocalDevice().compositor_stock(record)
+                summary = failure_summary(caught.exception)
+                self.assertEqual(summary.get('cleanup_readback'), expected)
+                self.assertNotIn('PRIVATE', str(summary))
+
     def test_stock_probe_invalid_child_output_cannot_become_route_or_private_diagnostic(self):
         import json, subprocess, deploy
         from install_device import LocalDevice

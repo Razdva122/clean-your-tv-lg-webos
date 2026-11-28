@@ -91,6 +91,21 @@ or authorize package preparation. Only the validated version and fixed status
 are exported; raw command output, stderr and exception text are excluded.
 No new TV installation, configuration, permission or endpoint is introduced.
 
+## Root cleanup readback failures
+
+For `cleanup-readback-unavailable`, the installer's saved report includes a
+`cleanup_readback` object when the TV supplies it. Its `check` identifies the
+call that stopped cleanup. For example, `apps` identifies the standard
+application catalog and `activities-info` identifies the fallback activity
+query. A successful fallback clears the earlier refusal from this observation.
+
+The `reason` distinguishes a timeout, client startup or stdin error, signal,
+nonzero exit, or rejected Luna reply. Recognized rejection reasons include
+missing service, missing method and permission denied. A nonzero exit can
+include `exit_status`; a rejected service reply can include the numeric
+`error_code`. The first failure and a later recovery observation can describe
+different calls. Older reports may contain only the generic cleanup error.
+
 ## Root driver install failures (source preparation, #397)
 
 A new optional `root_driver` object retains the bounded exception category,

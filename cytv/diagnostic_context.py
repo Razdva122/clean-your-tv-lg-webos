@@ -393,7 +393,8 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     from .errors import root_driver_details
-    from .errors import home_conflict_details
+    from .errors import cleanup_readback_details, home_conflict_details
+    result.update(cleanup_readback_details(value.get('cleanup_readback')))
     result.update(home_conflict_details(value.get('home_conflict_paths')))
     raw_probe=mapping(value.get('cleanup_probe'))
     probe=root_driver_details(raw_probe)
@@ -440,6 +441,9 @@ def product_summary(value):
         if key in value:result[key] = worker_summary(value[key])
     if 'cleanup_error' in value:
         result['cleanup_error'] = choice(value['cleanup_error'], CLEANUP_ERRORS)
+        if result['cleanup_error'] == 'cleanup-readback-unavailable':
+            from .errors import cleanup_readback_details
+            result.update(cleanup_readback_details(value.get('cleanup_readback')))
     if 'removal_reason' in value:
         from .recovery_state import REMOVAL_REASONS
         result['removal_reason'] = choice(value['removal_reason'], REMOVAL_REASONS)
@@ -601,7 +605,8 @@ def failure_summary(value):
     if 'guidance' in value:
         from .failure_help import report_summary
         result['guidance'] = report_summary(value['guidance'])
-    from .errors import home_conflict_details
+    from .errors import cleanup_readback_details, home_conflict_details
+    result.update(cleanup_readback_details(value.get('cleanup_readback')))
     result.update(home_conflict_details(value.get('home_conflict_paths')))
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int:

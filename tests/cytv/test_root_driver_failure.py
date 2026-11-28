@@ -91,6 +91,20 @@ with patch.object(deploy,'require_device',side_effect=PermissionError(13,'PRIVAT
                 self.assertEqual(getattr(error, 'home_conflict_paths', None), expected)
                 self.assertFalse(hasattr(self.failure(raw), 'home_conflict_paths'))
 
+    def test_resumed_cleanup_readback_failure_keeps_only_bound_diagnostic(self):
+        operation, removal = 'a' * 32, 'd' * 32
+        detail = {'check':'home-profiles', 'reason':'service-missing', 'error_code':-1}
+        reply = dict(operation=operation, removal=removal, cleanup_error='cleanup-readback-unavailable',
+                     cleanup_readback=dict(detail, errorText='PRIVATE', exit_status=3))
+        for changes, expected in [({}, detail), ({'removal':'f' * 32}, None), ({'cleanup_error':'route-changed'}, None),
+                                  ({'cleanup_readback':dict(detail, check='PRIVATE')}, None)]:
+            with self.subTest(changes=changes):
+                raw = json.dumps(dict(reply, **changes)).encode()
+                error = self.failure(raw, cleanup_tail=(operation, removal))
+                self.assertEqual(getattr(error, 'cleanup_readback', None), expected)
+                self.assertNotIn('PRIVATE', str(vars(error)))
+                self.assertFalse(hasattr(self.failure(raw), 'cleanup_readback'))
+
     def test_unknown_malformed_and_oversized_failures_stay_generic(self):
         for raw in (b'PRIVATE',b'\xff',b'x'*4097,json.dumps({'returnValue':True,'root_install_failure':DETAIL}).encode(),
                     json.dumps({'returnValue':False,'root_install_failure':dict(DETAIL,attempt='PRIVATE')}).encode()):
