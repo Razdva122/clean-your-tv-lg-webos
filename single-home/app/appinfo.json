@@ -1,0 +1,18 @@
+{
+  "id": "io.github.razdva122.cytvhomepilot",
+  "version": "0.0.3",
+  "vendor": "Clean Your TV",
+  "type": "web",
+  "main": "index.html",
+  "title": "Clean Your TV Home",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": [
+    "application.launcher",
+    "activity.operation",
+    "database.operation",
+    "securitykey.operation"
+  ]
+}
