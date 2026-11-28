@@ -430,6 +430,31 @@ class DebloatTests(unittest.TestCase):
         self.assertIn('Restored and verified', ' '.join(output))
         self.assertIn('Could not read the current value', ' '.join(output))
 
+    def test_root_domain_blocking_reads_before_and_after_one_explicit_write(self):
+        from cytv.desktop import DesktopConsole
+        write = DesktopConsole(lambda *args: None)
+        self.installer.remote = Mock(root=True)
+        def reply(state):
+            return {'returnValue':True, 'root':True, 'result':{'returnValue':True, 'result':state}}
+        self.installer.remote.luna.side_effect = [reply('off'), reply('on'), reply('on')]
+        self.assertTrue(debloat.offer_domain_blocking(self.installer, lambda label:'1', write))
+        calls = self.installer.remote.luna.call_args_list
+        self.assertEqual([call.args[1] for call in calls],
+                         [{'domainBlocking':'status'}, {'domainBlocking':'on'}, {'domainBlocking':'status'}])
+
+    def test_domain_blocking_does_not_write_on_skip_or_other_edition(self):
+        from cytv.desktop import DesktopConsole
+        write = DesktopConsole(lambda *args: None)
+        self.installer.remote = Mock(root=True)
+        self.installer.remote.luna.return_value = {
+            'returnValue': True, 'root': True, 'result': {'returnValue': True, 'result': 'off'}}
+        self.assertFalse(debloat.offer_domain_blocking(self.installer, lambda label:'', write))
+        self.installer.remote.luna.assert_called_once()
+        self.installer.remote.luna.reset_mock()
+        self.installer.profile['edition'] = 'no-root'
+        self.assertFalse(debloat.offer_domain_blocking(self.installer, self.fail, write))
+        self.installer.remote.luna.assert_not_called()
+
     def test_restore_uses_ssap_for_saved_developer_mode_profile(self):
         self.installer.profile.update(edition='no-root', port=9922)
         record = self.installer.store.device_dir(self.installer.profile) / 'debloat.json'

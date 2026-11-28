@@ -400,8 +400,10 @@ class CLITests(unittest.TestCase):
                 store.save(profile)
                 remote = Mock(root=root)
                 if root:
+                    # An older Root service can reject the optional domain-status probe.
                     remote.luna.side_effect = [
                         {'returnValue': False},
+                        *([{'returnValue': False}] if edition == 'root' else []),
                         {'returnValue': True, 'settings': {'homePromotion': 'on'}},
                         {'returnValue': True},
                         {'returnValue': True, 'settings': {'homePromotion': 'off'}},
@@ -433,7 +435,7 @@ class CLITests(unittest.TestCase):
                 remote.close.assert_called_once_with()
                 self.assertIsNone(store.pending(profile))
                 if outcome in ('cancelled', 'declined'):
-                    self.assertEqual(remote.luna.call_count, 1)  # Read-only TV metadata.
+                    self.assertEqual(remote.luna.call_count, 1 + (edition == 'root'))  # Read-only probes.
                     remote.run.assert_not_called()
                     pair.assert_not_called()
                     continue
@@ -443,7 +445,7 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(report['debloat'], {'homePromotion': outcome})
                 if root:
                     pair.assert_not_called()
-                    self.assertEqual(remote.luna.call_count, 4)  # Metadata, original, write, readback.
+                    self.assertEqual(remote.luna.call_count, 4 + (edition == 'root'))  # Probes, original, write, readback.
                     remote.run.assert_not_called()
                     remote.luna.assert_any_call(
                         'com.webos.settingsservice/setSystemSettings',

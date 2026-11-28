@@ -220,6 +220,8 @@ En Privacidad puedes desactivar por separado el envío a LG de registros de depu
 
 Para deshacer un solo cambio, abre Debloat en Mantenimiento con la misma conexión guardada del televisor. Elige el ajuste, revisa el valor original y confirma. En televisores compatibles, puedes desactivar el inicio automático de LG Channels en Todos los ajustes → General → Canales → Inicio automático de LG Channels.
 
+En la edición Root, abre Mantenimiento → Debloat → Bloqueo de dominios de publicidad y rastreo. Actívalo para bloquear ciertos dominios en este televisor. Desactívalo para recuperar el archivo hosts original. Algunas aplicaciones pueden seguir mostrando anuncios. Revisa el ajuste después de actualizar Root.
+
 Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
